@@ -130,10 +130,10 @@ function updateUI(waterLevel) {
     if (!auth || !auth.currentUser) return;
 
     const currentLevelEl = document.getElementById('current-level');
-    const waterFillEl    = document.getElementById('water-fill');
-    const alertPanelEl   = document.getElementById('alert-panel');
+    const waterFillEl = document.getElementById('water-fill');
+    const alertPanelEl = document.getElementById('alert-panel');
     const alertMessageEl = document.getElementById('alert-message');
-    const lastUpdateEl   = document.getElementById('last-update');
+    const lastUpdateEl = document.getElementById('last-update');
     const adminStatusAir = document.getElementById('admin-status-air');
 
     if (currentLevelEl) currentLevelEl.textContent = Math.round(waterLevel);
@@ -145,13 +145,14 @@ function updateUI(waterLevel) {
 
     let currentState = 'AMAN';
 
-    if (waterLevel >= THRESHOLDS.SIAGA2) {
+    // CEK SIAGA1 (paling bahaya, 250cm) DULU agar tidak tertangkap oleh SIAGA2 (200cm)
+    if (waterLevel >= THRESHOLDS.SIAGA1) {
         if (waterFillEl)    waterFillEl.style.backgroundColor = 'var(--water-siaga1)';
         if (alertPanelEl)   alertPanelEl.classList.add('status-siaga1');
         if (alertMessageEl) { alertMessageEl.textContent = 'SIAGA 2 (Bahaya)'; alertMessageEl.style.color = 'var(--status-siaga1)'; }
         if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 2'; adminStatusAir.style.color = '#e74c3c'; }
         currentState = 'SIAGA2';
-    } else if (waterLevel >= THRESHOLDS.SIAGA1) {
+    } else if (waterLevel >= THRESHOLDS.SIAGA2) {
         if (waterFillEl)    waterFillEl.style.backgroundColor = 'var(--water-siaga2)';
         if (alertPanelEl)   alertPanelEl.classList.add('status-siaga2');
         if (alertMessageEl) { alertMessageEl.textContent = 'SIAGA 1 (Waspada)'; alertMessageEl.style.color = 'var(--status-siaga2)'; }
@@ -173,7 +174,7 @@ function updateUI(waterLevel) {
         } else if (currentState === 'SIAGA2') {
             const lonjakanDariAman = lastNotifState === 'AMAN';
             const prefix = lonjakanDariAman
-                ? `⚡ LONJAKAN MENDADAK! Ketinggian air mencapai ${Math.round(waterLevel)}cm.`
+                ? `Ketinggian air mencapai ${Math.round(waterLevel)}cm.`
                 : `Ketinggian air mencapai ${Math.round(waterLevel)}cm.`;
             const msg2 = `${prefix}\nHIMBAUAN: Masyarakat dihimbau untuk mulai evakuasi.`;
             sendNotification('⚠️ SIAGA 2', { body: msg2 });
