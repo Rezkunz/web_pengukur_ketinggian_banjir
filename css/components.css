@@ -231,15 +231,17 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    background: linear-gradient(135deg, #f1c40f, #f39c12); /* default: kuning */
 }
 
+/* SIAGA 1 = Waspada → kuning/orange */
 .custom-modal-header.siaga1 {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    background: linear-gradient(135deg, #f39c12, #e67e22);
 }
 
+/* SIAGA 2 = Bahaya → merah */
 .custom-modal-header.siaga2 {
-    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .modal-wave {
