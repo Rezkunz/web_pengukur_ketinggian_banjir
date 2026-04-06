@@ -11,8 +11,11 @@ let lastNotifState = 'AMAN';
 
 // Chart initialization
 let waterChart;
-let hourlyData = [0, 0, 0, 0, 0, 0, 0]; // Riwayat grafik akan dimulai dari 0 saat web dibuka
+let hourlyData = [0, 0, 0, 0, 0, 0, 0]; // Akan diisi dari Firebase saat load
 let currentWaterLevel = 0; // State penyimpan nilai air terkini dr Firebase
+
+const CHART_HISTORY_PATH = 'sensor_data/chart_history';
+const CHART_MAX_POINTS = 7;
 
 function initChart(isAdmin = false) {
     const canvasId = isAdmin ? 'adminWaterChart' : 'waterChart';
@@ -56,13 +59,73 @@ function initChart(isAdmin = false) {
             }
         }
     });
+
+    // Setelah chart dibuat, load riwayat dari Firebase
+    loadChartHistoryFromFirebase();
 }
 
+/**
+ * Memuat riwayat grafik dari Firebase (7 titik terakhir).
+ * Dipanggil saat chart diinisialisasi agar semua device melihat data yang sama.
+ */
+function loadChartHistoryFromFirebase() {
+    if (!database) return;
+    database.ref(CHART_HISTORY_PATH)
+        .orderByKey()
+        .limitToLast(CHART_MAX_POINTS)
+        .once('value', (snapshot) => {
+            const entries = [];
+            snapshot.forEach(child => {
+                entries.push(child.val()); // nilai level air
+            });
+            // Jika data kurang dari 7, isi sisanya dengan 0 di depan
+            while (entries.length < CHART_MAX_POINTS) {
+                entries.unshift(0);
+            }
+            hourlyData = entries;
+            if (waterChart) {
+                waterChart.data.datasets[0].data = hourlyData;
+                waterChart.update();
+            }
+        });
+}
+
+/**
+ * Menyimpan satu titik data ke Firebase dan menghapus entri lama
+ * agar hanya menyimpan maksimal CHART_MAX_POINTS entri.
+ */
+function saveChartPointToFirebase(value) {
+    if (!database) return;
+    const historyRef = database.ref(CHART_HISTORY_PATH);
+    const timestamp = Date.now().toString(); // key berupa unix ms
+
+    // 1. Simpan titik baru
+    historyRef.child(timestamp).set(Math.round(value))
+        .then(() => {
+            // 2. Ambil semua kunci, hapus yang melebihi batas
+            return historyRef.orderByKey().once('value');
+        })
+        .then((snapshot) => {
+            const keys = [];
+            snapshot.forEach(child => keys.push(child.key));
+            // Hapus kunci-kunci lama jika total > CHART_MAX_POINTS
+            const toDelete = keys.slice(0, Math.max(0, keys.length - CHART_MAX_POINTS));
+            toDelete.forEach(key => historyRef.child(key).remove());
+        })
+        .catch(err => console.warn('Gagal menyimpan riwayat grafik:', err));
+}
+
+/**
+ * Update grafik lokal dan sinkronisasi ke Firebase.
+ */
 function updateChartData(newValue) {
     if (!waterChart) return;
-    hourlyData.shift(); // Remove oldest
-    hourlyData.push(newValue); // Add new
+    hourlyData.shift();
+    hourlyData.push(newValue);
     waterChart.update();
+
+    // Simpan ke Firebase agar device lain bisa membaca riwayat yang sama
+    saveChartPointToFirebase(newValue);
 }
 
 function calculatePercentage(currentValue, maxValue) {
@@ -135,11 +198,17 @@ function updateUI(waterLevel) {
 
     if (currentState !== lastNotifState) {
         if (currentState === 'SIAGA1') {
+            // Hanya tampilkan notif SIAGA 1 jika sebelumnya AMAN (bukan loncatan dari SIAGA2 ke bawah)
             const msg1 = `Ketinggian air mencapai ${Math.round(waterLevel)}cm.\nPERINGATAN: Segera evakuasi dan pergi ke posko terdekat!`;
             sendNotification('🚨 SIAGA 1', { body: msg1 });
             showCustomModal('SIAGA1', 'Warning!', msg1);
         } else if (currentState === 'SIAGA2') {
-            const msg2 = `Ketinggian air mencapai ${Math.round(waterLevel)}cm.\nHIMBAUAN: Masyarakat dihimbau untuk mulai evakuasi.`;
+            // Jika lompatan langsung dari AMAN ke SIAGA 2, tampilkan notif SIAGA 2 saja (skip SIAGA 1)
+            const lonjakanDariAman = lastNotifState === 'AMAN';
+            const prefix = lonjakanDariAman
+                ? `⚡ LONJAKAN MENDADAK! Ketinggian air mencapai ${Math.round(waterLevel)}cm.`
+                : `Ketinggian air mencapai ${Math.round(waterLevel)}cm.`;
+            const msg2 = `${prefix}\nHIMBAUAN: Masyarakat dihimbau untuk mulai evakuasi.`;
             sendNotification('⚠️ SIAGA 2', { body: msg2 });
             showCustomModal('SIAGA2', 'Warning!', msg2);
         }
