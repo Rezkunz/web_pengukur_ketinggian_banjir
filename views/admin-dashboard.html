@@ -1,0 +1,23 @@
+                <h2 class="section-title">Admin Dashboard</h2>
+
+                <!-- Status Summary -->
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <div class="glass-panel" style="flex: 1; padding: 20px; text-align: center;">
+                        <h4 style="color: #ccc; margin: 0 0 10px 0;">Total Laporan</h4>
+                        <h2 style="color: #3498db; margin: 0; font-size: 2rem;" id="admin-total-laporan">0</h2>
+                    </div>
+                    <div class="glass-panel" style="flex: 1; padding: 20px; text-align: center;">
+                        <h4 style="color: #ccc; margin: 0 0 10px 0;">Status Air</h4>
+                        <h2 style="color: #58d68d; margin: 0; font-size: 1.5rem;" id="admin-status-air">Aman</h2>
+                    </div>
+                </div>
+
+                <!-- Debit Chart -->
+                <section class="chart-section glass-panel">
+                    <h3>Grafik Terpusat Kenaikan Debit Air</h3>
+                    <div class="chart-container">
+                        <canvas id="adminWaterChart"></canvas>
+                    </div>
+                </section>
+                
+                <p class="refresh-time" style="text-align:center;">Sistem Aktif & Terlindungi</p>

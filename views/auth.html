@@ -1,0 +1,40 @@
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height: 70vh; padding: 20px;">
+                    <div class="glass-panel form-panel" style="width: 100%; max-width: 400px; padding: 30px;">
+                        
+                        <!-- Toggle Headers -->
+                        <div style="display: flex; gap: 20px; border-bottom: 2px solid rgba(0,0,0,0.1); margin-bottom: 20px; padding-bottom: 5px;">
+                            <h2 id="tab-login" onclick="switchAuthMode('login')" style="flex: 1; text-align: center; cursor: pointer; color: #2c3e50; font-size: 1.2rem; transition: 0.3s; margin: 0; padding-bottom: 5px; border-bottom: 2px solid #58d68d;">Login</h2>
+                            <h2 id="tab-register" onclick="switchAuthMode('register')" style="flex: 1; text-align: center; cursor: pointer; color: #95a5a6; font-size: 1.2rem; transition: 0.3s; margin: 0; padding-bottom: 5px; border-bottom: 2px solid transparent;">Register</h2>
+                        </div>
+
+                        <!-- Login Form -->
+                        <form id="form-login" onsubmit="handleLogin(event)">
+                            <div class="form-group">
+                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Email</label>
+                                <input type="email" id="login-email" placeholder="user@contoh.com" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:15px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Password</label>
+                                <input type="password" id="login-password" placeholder="••••••••" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:20px;">
+                            </div>
+                            <button type="submit" class="btn-submit" style="width: 100%; font-weight: bold;">Sign In</button>
+                        </form>
+
+                        <!-- Register Form -->
+                        <form id="form-register" onsubmit="handleRegister(event)" style="display: none;">
+                            <div class="form-group">
+                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Nama Lengkap</label>
+                                <input type="text" id="register-name" placeholder="Nama Anda" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:15px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Email</label>
+                                <input type="email" id="register-email" placeholder="user@contoh.com" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:15px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Password</label>
+                                <input type="password" id="register-password" minlength="6" placeholder="Minimal 6 karakter" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:20px;">
+                            </div>
+                            <button type="submit" class="btn-submit" style="width: 100%; font-weight: bold;">Sign Up</button>
+                        </form>
+                    </div>
+                </div>

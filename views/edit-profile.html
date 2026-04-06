@@ -1,0 +1,24 @@
+                <h2 class="section-title">Edit Profile</h2>
+                <div class="glass-panel" style="padding: 25px; border-radius: 15px; margin-bottom: 20px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div id="edit-avatar" style="background: linear-gradient(135deg, #3498db, #2c3e50); color: #fff; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin: 0 auto 10px auto;">U</div>
+                        <h3 id="edit-role-badge" style="margin: 0; font-size: 0.9rem; color: #fff; background: #58d68d; display: inline-block; padding: 3px 12px; border-radius: 12px;">User</h3>
+                    </div>
+                    
+                    <form id="form-edit-profile" onsubmit="saveProfile(event)">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: block; color: #2c3e50; margin-bottom: 8px; font-weight: 600;">Nama Lengkap</label>
+                            <input type="text" id="edit-nama" placeholder="Nama Lengkap Anda" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #333; font-size: 1rem;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label style="display: block; color: #7f8c8d; margin-bottom: 8px; font-weight: 600;">Email (Tidak dapat diubah)</label>
+                            <input type="email" id="edit-email" disabled style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #eee; background: #f9f9f9; color: #7f8c8d; font-size: 1rem; cursor: not-allowed;">
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" onclick="closeEditProfile()" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; background: white; color: #333; font-weight: bold; cursor: pointer; transition: 0.2s;">Batal</button>
+                            <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #3498db; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);">Simpan</button>
+                        </div>
+                    </form>
+                </div>

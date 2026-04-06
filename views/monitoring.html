@@ -1,0 +1,46 @@
+                <h2 class="section-title">Monitoring Real-Time</h2>
+
+                <!-- Water Visualization -->
+                <section class="water-container glass-panel">
+                    <div class="water-tank-wrapper">
+                        <div class="water-tank">
+                            <div class="water-fill" id="water-fill">
+                                <div class="wave"></div>
+                                <div class="wave wave2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="level-info">
+                        <h3>Tinggi Air</h3>
+                        <div class="level-value">
+                            <span id="current-level">0</span>
+                            <span class="unit">cm</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Status Alert -->
+                <section class="alert-section glass-panel" id="alert-panel">
+                    <div class="alert-icon" id="alert-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32"
+                            height="32">
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 18a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1-5h-2V7h2v6z" />
+                        </svg>
+                    </div>
+                    <div class="alert-text">
+                        <h3>Status Level</h3>
+                        <p id="alert-message">Aman</p>
+                    </div>
+                </section>
+
+                <!-- Debit Chart -->
+                <section class="chart-section glass-panel">
+                    <h3>Grafik Kenaikan Debit Air (Per Jam)</h3>
+                    <div class="chart-container">
+                        <canvas id="waterChart"></canvas>
+                    </div>
+                </section>
+
+                <p class="refresh-time">Terakhir diperbarui: <span id="last-update">-</span></p>

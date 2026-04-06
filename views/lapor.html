@@ -1,0 +1,24 @@
+                <h2 class="section-title">Lapor Kejadian</h2>
+                <div class="glass-panel form-panel">
+                    <p class="form-desc">Laporkan jika terjadi genangan air atau banjir di sekitar Anda.</p>
+                    <form id="form-lapor" onsubmit="submitLapor(event)">
+                        <div class="form-group">
+                            <label>Nama Pelapor</label>
+                            <input type="text" id="lapor-nama" placeholder="Masukkan nama Anda" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Lokasi / Alamat</label>
+                            <textarea id="lapor-lokasi" rows="3" placeholder="Deskripsikan lokasi selengkap mungkin" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Tingkat Genangan (Perkiraan)</label>
+                            <select id="lapor-tingkat">
+                                <option>Mata kaki</option>
+                                <option>Lutut</option>
+                                <option>Pinggang</option>
+                                <option>Dada ke atas</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-submit">Kirim Laporan</button>
+                    </form>
+                </div>

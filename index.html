@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Banjir v2</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f0f4f8">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/monitoring.css">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- Header -->
+        <header>
+            <div class="header-logo" style="display: flex; align-items: center; gap: 12px;">
+                <div class="logo-wrapper">
+                    <img src="logo.png" alt="Logo Monitor Banjir" width="36" height="36" style="border-radius: 50%;">
+                </div>
+                <h1 style="margin: 0; font-size: 1.25rem;">SAFE</h1>
+            </div>
+            
+            <!-- User Profile Dropdown -->
+            <div class="profile-menu-wrapper" style="display: none;" id="profile-wrapper">
+                <div class="profile-trigger" id="profile-trigger" onclick="toggleProfileMenu()" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <div class="profile-avatar" id="header-avatar" style="background: linear-gradient(135deg, #3498db, #2c3e50); color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">U</div>
+                    <span id="header-name" style="font-weight:600; color: #333;">User</span>
+                </div>
+                <div class="profile-dropdown" id="profile-dropdown" style="display: none; position: absolute; top: 70px; right: 20px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000; overflow: hidden; color: #333;">
+                    <ul style="list-style: none; margin: 0; padding: 0;">
+                        <li style="padding: 10px 20px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="openEditProfile()">Edit Profile</li>
+                        <li style="padding: 10px 20px; color: #e74c3c; cursor: pointer;" onclick="logoutUser()">Log Out</li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="content-area">
+
+            <!-- AUTH VIEW -->
+            <div id="view-auth" class="view-section"></div>
+
+            <!-- VIEW 1: MONITORING BANJIR -->
+            <div id="view-monitoring" class="view-section"></div>
+
+            <!-- VIEW 2: KONTAK DARURAT -->
+            <div id="view-darurat" class="view-section"></div>
+
+            <!-- VIEW 3: LAPOR KEJADIAN -->
+            <div id="view-lapor" class="view-section"></div>
+
+            <!-- VIEW 4: SARAN & MASUKAN -->
+            <div id="view-saran" class="view-section"></div>
+
+            <!-- VIEW ADMIN: DASHBOARD -->
+            <div id="view-admin-dashboard" class="view-section"></div>
+
+            <!-- VIEW ADMIN: LAPORAN -->
+            <div id="view-admin-laporan" class="view-section"></div>
+
+            <!-- VIEW ADMIN: SARAN -->
+            <div id="view-admin-saran" class="view-section"></div>
+
+            <!-- VIEW SHARED: EDIT PROFILE -->
+            <div id="view-edit-profile" class="view-section"></div>
+
+        </main>
+
+        <!-- USER NAVIGATION -->
+        <nav class="bottom-nav" id="user-navbar" style="display: none;">
+            <div class="nav-item active" data-target="view-monitoring">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 3L2 12h3v8h14v-8h3L12 3zm0 2.83l7 6.17v6h-14v-6l7-6.17z" />
+                </svg>
+                <span>Monitor</span>
+            </div>
+            <div class="nav-item" data-target="view-darurat">
+                <svg viewBox="0 0 24 24">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v16h20V4c0-1.1-.9-2-2-2zM9 18H7v-4H3v-2h4V8h2v4h4v2H9v4z" />
+                </svg>
+                <span>Darurat</span>
+            </div>
+            <div class="nav-item" data-target="view-lapor">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                </svg>
+                <span>Lapor</span>
+            </div>
+            <div class="nav-item" data-target="view-saran">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" />
+                </svg>
+                <span>Saran</span>
+            </div>
+        </nav>
+
+        <!-- ADMIN NAVIGATION -->
+        <nav class="bottom-nav" id="admin-navbar" style="display: none;">
+            <div class="nav-item active" data-target="view-admin-dashboard">
+                <span>🎛️</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-target="view-admin-laporan">
+                <span>📋</span>
+                <span>Laporan</span>
+            </div>
+            <div class="nav-item" data-target="view-admin-saran">
+                <span>📬</span>
+                <span>Feedback</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Custom Popup Modal -->
+    <div class="custom-modal-overlay" id="custom-modal">
+        <div class="custom-modal-box">
+            <button class="custom-modal-close" onclick="closeCustomModal()">✕</button>
+            <div class="custom-modal-header" id="modal-header">
+                <!-- SVG Wave for smooth curvy background -->
+                <svg class="modal-wave" viewBox="0 0 1440 320" preserveAspectRatio="none">
+                    <path fill="#ffffff" fill-opacity="1"
+                        d="M0,192L48,181.3C96,171,192,149,288,149.3C384,149,480,171,576,192C672,213,768,235,864,224C960,213,1056,171,1152,154.7C1248,139,1344,149,1392,154.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z">
+                    </path>
+                </svg>
+                <!-- Warning icon -->
+                <svg viewBox="0 0 24 24" class="modal-icon">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                </svg>
+            </div>
+            <div class="custom-modal-body">
+                <h2 id="modal-title">Warning!</h2>
+                <p id="modal-desc">Message goes here...</p>
+                <button class="btn-modal-action" onclick="closeCustomModal()">MENGERTI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="custom-modal-overlay" id="success-modal" onclick="closeSuccessModal(event)">
+        <div class="success-modal-box" onclick="event.stopPropagation()">
+            <button class="custom-modal-close" style="background: #f0f0f0; color: #999;"
+                onclick="closeSuccessModal()">✕</button>
+            <div class="success-icon-wrapper">
+                <div class="success-icon-glow"></div>
+                <div class="success-icon-circle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <h2 id="success-modal-title">Success</h2>
+            <p id="success-modal-desc">Your action was successful.</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <!-- Custom JS -->
+    <script src="backend/firebase-config.js"></script>
+    <script src="backend/ui.js"></script>
+    <script src="backend/auth.js"></script>
+    <script src="backend/monitoring.js"></script>
+    <script src="backend/reports.js"></script>
+    <script src="backend/main.js"></script>
+</body>
+
+</html>
