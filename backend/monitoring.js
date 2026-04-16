@@ -295,10 +295,24 @@ function updateOfflineUI(offline, sinceText, reason) {
     const badge      = document.getElementById('admin-sensor-badge');
     const badgeLabel = document.getElementById('admin-sensor-label');
     const badgeTime  = document.getElementById('admin-sensor-time');
+    
+    // ── New Stat Card Sensor Info ──
+    const statStatus = document.getElementById('stat-sensor-status');
+    const statIconWrap = document.getElementById('stat-sensor-icon');
+
     if (badge) {
         badge.className = `sensor-status-badge ${offline ? 'offline' : 'online'}`;
         if (badgeLabel) badgeLabel.textContent = offline ? 'Offline' : 'Online';
         if (badgeTime) badgeTime.textContent = `Dicek: ${sinceText}`;
+    }
+
+    if (statStatus) {
+        statStatus.textContent = offline ? 'Offline' : 'Online';
+        statStatus.style.color = offline ? 'var(--status-siaga1)' : 'var(--status-aman)';
+    }
+
+    if (statIconWrap) {
+        statIconWrap.className = `stat-icon-wrap ${offline ? 'icon-orange' : 'icon-green'}`;
     }
 
     // ── Water tank visual ──

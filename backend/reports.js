@@ -68,10 +68,18 @@ function submitSaran(e) {
 function listenAdminData() {
     if(!database) return;
 
-    // Listen to Laporan count
+    // 1. Listen to TOTAL USERS
+    database.ref('users').on('value', snap => {
+        const totalUserEl = document.getElementById('stat-total-pengguna');
+        if(totalUserEl) totalUserEl.textContent = snap.numChildren();
+    });
+
+    // 2. Listen to Laporan count
     database.ref('laporan').on('value', snap => {
         const adminLapor = document.getElementById('admin-laporan-list');
-        const adminTotalLaporan = document.getElementById('admin-total-laporan');
+        const adminTotalLaporanLegacy = document.getElementById('admin-total-laporan');
+        const statTotalLaporan = document.getElementById('stat-total-laporan');
+        
         if(adminLapor) adminLapor.innerHTML = '';
         
         let count = 0;
@@ -107,13 +115,16 @@ function listenAdminData() {
             }
         });
         
-        if(adminTotalLaporan) adminTotalLaporan.textContent = count;
+        if(adminTotalLaporanLegacy) adminTotalLaporanLegacy.textContent = count;
+        if(statTotalLaporan) statTotalLaporan.textContent = count;
         if(count === 0 && adminLapor) adminLapor.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:30px; background: rgba(255,255,255,0.5); border-radius: 15px; border: 2px dashed #bdc3c7;">Belum ada laporan genangan masuk.</div>';
     });
     
-    // Listen to Saran
+    // 3. Listen to Saran
     database.ref('saran').on('value', snap => {
         const adminSaran = document.getElementById('admin-saran-list');
+        const statTotalSaran = document.getElementById('stat-total-saran');
+
         if(adminSaran) adminSaran.innerHTML = '';
         
         let count = 0;
@@ -135,6 +146,7 @@ function listenAdminData() {
             }
         });
         
+        if(statTotalSaran) statTotalSaran.textContent = count;
         if(count === 0 && adminSaran) adminSaran.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:30px; background: rgba(255,255,255,0.5); border-radius: 15px; border: 2px dashed #bdc3c7;">Belum ada saran atau feedback.</div>';
     });
 }

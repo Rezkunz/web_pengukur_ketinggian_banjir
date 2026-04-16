@@ -1,6 +1,7 @@
 /*********************************************
-  Program : Deteksi Banjir - Firebase RTDB Only (Real-Time Responsif)
+  Program : Deteksi Banjir - Ultra Stable Version
   Output  : LCD, Firebase RTDB
+  Features: 7-sample Median, Delta Filtering, EMA Smoothing
 *********************************************/ 
 #include <ESP8266WiFi.h> 
 #include <LiquidCrystal_I2C.h>
@@ -10,7 +11,7 @@
 char ssid[] = "Ciganitiry"; 
 char pass[] = "Mabelku18";   
 
-// Konfigurasi Firebase Anda
+// Konfigurasi Firebase
 #define FIREBASE_HOST "safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app"
 #define FIREBASE_AUTH "AIzaSyChO4h8v33LB_ovIXcBg-yVJrmN40N0WUk"
 
@@ -18,9 +19,16 @@ char pass[] = "Mabelku18";
 FirebaseData fbdo;
 FirebaseAuth auth_fb;
 FirebaseConfig config_fb;
+FirebaseJson json;
 
 unsigned long lastFirebaseUpdate = 0;
-const unsigned long firebaseInterval = 500; // Dibuat sangat ngebut (0.5 detik) karena sudah tidak terbebani Telegram
+const unsigned long firebaseInterval = 2000; 
+
+unsigned long lastSensorRead = 0;
+const unsigned long sensorInterval = 200; 
+
+unsigned long lastLcdUpdate = 0;
+const unsigned long lcdInterval = 500; 
 
 // Inisialisasi Perangkat
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -28,20 +36,19 @@ const int trigPin = 14; // D5
 const int echoPin = 12; // D6
 
 #define SOUND_VELOCITY 0.034
-long duration;
-int d_cm;
-int H = 300;  // Tinggi pemasangan sensor dari dasar (cm). Sesuaikan jika berbeda!
-int level;    // Tinggi air dalam cm = H - d_cm (sensor menghadap ke BAWAH)
-int s1 = 0, s2 = 0; 
-String status;
+int H = 300;  
+float filteredLevel = 0.0; // Gunakan float untuk smoothing
+int displayLevel = 0;    
+String currentStatus = "Aman";
 
-// Threshold Ketinggian Air (sensor ke BAWAH: level = H - d_cm)
-// d_cm=250 → level=300-250=50cm → SIAGA 1
-// d_cm=200 → level=300-200=100cm → SIAGA 2 (lebih bahaya)
-#define LEVEL_SIAGA1 50  // level >= 50cm : SIAGA 1 (waspada)
-#define LEVEL_SIAGA2 100 // level >= 100cm: SIAGA 2 (bahaya)
+// Filter Parameters
+#define DELTA_LIMIT 30.0   // Maksimal perubahan cm per pembacaan (cegah lonjakan)
+#define EMA_ALPHA 0.3      // Faktor smoothing (0.1 - 0.5). Semakin kecil semakin halus.
+#define SAMPLES 7          // Jumlah sampel median
 
-void baca_level(); 
+// Threshold Ketinggian Air
+#define LEVEL_SIAGA1 50  
+#define LEVEL_SIAGA2 100 
 
 void setup() {
   Serial.begin(115200); 
@@ -51,112 +58,153 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.clear();
-  lcd.print("  Sistem Aktif  ");
+  lcd.print(F("  Sistem Aktif  "));
   lcd.setCursor(0,1);
-  lcd.print("  Cek WiFi...   ");
+  lcd.print(F("  Mode: STABIL  "));
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
   
-  while (WiFi.status() != WL_CONNECTED) {
+  int timeout = 0;
+  while (WiFi.status() != WL_CONNECTED && timeout < 40) {
     delay(500);
     Serial.print(".");
+    timeout++;
   }
   
   lcd.clear();
-  lcd.print("Koneksi Sukses!");
+  if (WiFi.status() == WL_CONNECTED) {
+    lcd.print(F("Koneksi Sukses!"));
+  } else {
+    lcd.print(F("WiFi Gagal!"));
+  }
   delay(1000);
   
   // Inisialisasi Firebase
-  lcd.clear();
-  lcd.print("Koneksi Firebase");
   config_fb.host = FIREBASE_HOST;
   config_fb.signer.tokens.legacy_token = FIREBASE_AUTH;
   Firebase.begin(&config_fb, &auth_fb);
-  
-  // Batasi SSL Buffer Firebase
   fbdo.setBSSLBufferSize(1024, 1024);
   Firebase.reconnectWiFi(true); 
   
+  // Ambil bacaan awal agar filteredLevel tidak nol
+  float initialRead = getMedianReading();
+  if(initialRead < 999) filteredLevel = (float)(H - initialRead);
+  if(filteredLevel < 0) filteredLevel = 0;
+
   lcd.clear();
-  lcd.print("Level=");
+  lcd.print(F("Init OK..."));
+  delay(1000);
+  lcd.clear();
+  lcd.print(F("Level="));
   lcd.setCursor(0,1);
-  lcd.print("Status:");
+  lcd.print(F("Status:"));
 }
 
 void loop() { 
-  yield(); // Beri napas pada ESP8266 agar terhindar dari WDT Reset
+  yield(); 
 
-  // 1. Update bacaan sensor secara terus menerus ke variabel
-  baca_level(); 
+  // 1. Baca Sensor & Filter (setiap 200ms)
+  if (millis() - lastSensorRead >= sensorInterval) {
+    applyUltraFilter();
+    lastSensorRead = millis();
+  }
+
+  // 2. Update LCD (setiap 500ms)
+  if (millis() - lastLcdUpdate >= lcdInterval) {
+    updateLCD();
+    lastLcdUpdate = millis();
+  }
   
-  // 2. Update data ke Firebase DB Web
+  // 3. Update data ke Firebase (setiap 2 detik)
   if (millis() - lastFirebaseUpdate >= firebaseInterval) {
-    if(d_cm > 0) {
-      // Kirim level (tinggi air)
-      if (Firebase.setInt(fbdo, "/sensor_data/water_level", level)) {
-        // Sukses - kirim juga timestamp agar web dapat deteksi sensor online/offline
-        Firebase.setInt(fbdo, "/sensor_data/ts", (int)(millis() / 1000)); // dalam detik
-      } else {
-        Serial.println("Gagal terhubung Firebase: " + fbdo.errorReason());
-      }
+    if (WiFi.status() == WL_CONNECTED) {
+      sendDataToFirebase();
     }
     lastFirebaseUpdate = millis();
   }
 }
 
-// Fungsi bantu: ukur satu sampel d_cm (dalam cm)
 int ukur_satu() {
-    digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
-    long dur = pulseIn(echoPin, HIGH, 30000);
-    return (int)(dur * SOUND_VELOCITY / 2);
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  long dur = pulseIn(echoPin, HIGH, 25000); 
+  if (dur == 0) return 999; 
+  return (int)(dur * SOUND_VELOCITY / 2);
 }
 
-void baca_level() {
-    // Ambil 3 sampel cepat (~9ms total), lalu ambil median
-    int a = ukur_satu(); delay(3);
-    int b = ukur_satu(); delay(3);
-    int c = ukur_satu();
+int getMedianReading() {
+  int samples[SAMPLES];
+  for(int i=0; i<SAMPLES; i++){
+    samples[i] = ukur_satu();
+    delay(15); // Jeda antar chirp agar gema hilang
+  }
 
-    // Sort 3 nilai (bubble sort mini)
-    if(a > b) { int t=a; a=b; b=t; }
-    if(b > c) { int t=b; b=c; c=t; }
-    if(a > b) { int t=a; a=b; b=t; }
-    int median_cm = b; // Nilai tengah = median
-
-    // Abaikan jika timeout (0) atau di luar jangkauan sensor
-    if(median_cm <= 0 || median_cm > 400) return;
-
-    // Simpan hasil ke variabel global
-    d_cm = median_cm;
-    level = H - d_cm;
-    if (level < 0) level = 0;
-
-    // LCD baris 1: tampilkan level (tinggi air)
-    lcd.setCursor(6,0);
-    lcd.print(level);
-    lcd.print("cm   ");
-
-    // Kondisi Siaga 2 (paling bahaya - dicek DULU karena threshold lebih tinggi)
-    if(level >= LEVEL_SIAGA2){
-      s2 = 1; s1 = 0;
-      status = "Siaga 2";
-      lcd.setCursor(7,1); lcd.print("Siaga 2 ");
+  // Sort samples
+  for(int i=0; i<SAMPLES-1; i++){
+    for(int j=i+1; j<SAMPLES; j++){
+      if(samples[i] > samples[j]){
+        int temp = samples[i];
+        samples[i] = samples[j];
+        samples[j] = temp;
+      }
     }
-    // Kondisi Siaga 1 (waspada)
-    else if(level >= LEVEL_SIAGA1){
-      s1 = 1; s2 = 0;
-      status = "Siaga 1";
-      lcd.setCursor(7,1); lcd.print("Siaga 1 ");
-    }
-    // Kondisi Aman
-    else {
-      status = "Aman";
-      s1 = 0; s2 = 0;
-      lcd.setCursor(7,1); lcd.print("Aman    ");
-    }
+  }
+  return samples[SAMPLES/2]; // Nilai tengah
+}
+
+void applyUltraFilter() {
+  int raw_dist = getMedianReading();
+  if (raw_dist >= 999 || raw_dist <= 0) return;
+
+  float targetLevel = (float)(H - raw_dist);
+  if (targetLevel < 0) targetLevel = 0;
+
+  // DELTA FILTER: Cegah perubahan mendadak yang tidak masuk akal
+  float diff = abs(targetLevel - filteredLevel);
+  if (diff > DELTA_LIMIT) {
+    // Jika lonjakan terlalu besar, kita perhalus perubahannya tapi jangan langsung diabaikan total 
+    // agar sensor tetap bisa mengikuti kenaikan air yang asli tapi perlahan.
+    targetLevel = filteredLevel + (targetLevel > filteredLevel ? 5.0 : -5.0); 
+    Serial.println(F("Spike Detected & Throttled!"));
+  }
+
+  // EMA FILTER: Smoothing pergerakan angka
+  filteredLevel = (EMA_ALPHA * targetLevel) + ((1.0 - EMA_ALPHA) * filteredLevel);
+  
+  displayLevel = (int)(filteredLevel + 0.5); // Pembulatan
+
+  // Update Status
+  if(displayLevel >= LEVEL_SIAGA2)      currentStatus = "Siaga 2";
+  else if(displayLevel >= LEVEL_SIAGA1) currentStatus = "Siaga 1";
+  else                                  currentStatus = "Aman";
+  
+  Serial.print(F("Raw Dist: ")); Serial.print(raw_dist);
+  Serial.print(F(" | Filtered Level: ")); Serial.println(displayLevel);
+}
+
+void updateLCD() {
+  lcd.setCursor(6,0);
+  lcd.print(displayLevel);
+  lcd.print(F("cm   "));
+
+  lcd.setCursor(7,1);
+  lcd.print(currentStatus);
+  lcd.print(F("    "));
+}
+
+void sendDataToFirebase() {
+  json.clear();
+  json.add("water_level", displayLevel);
+  json.add("status", currentStatus);
+  json.add("ts", (uint32_t)(millis() / 1000));
+
+  if (!Firebase.setJSON(fbdo, "/sensor_data", json)) {
+    Serial.println(F("FB Error: ") + fbdo.errorReason());
+  } else {
+    Serial.println(F("Firebase Updated"));
+  }
 }

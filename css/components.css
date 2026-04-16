@@ -10,6 +10,105 @@
     margin-bottom: 20px;
 }
 
+/* Stat Cards Grid */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (min-width: 480px) {
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .stat-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Individual Stat Card */
+.stat-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: default;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.06);
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #8898aa;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #32325d;
+}
+
+.stat-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-icon-wrap svg {
+    width: 24px;
+    height: 24px;
+    fill: #fff;
+}
+
+/* Icon Variations */
+.icon-blue {
+    background: linear-gradient(135deg, #3290ff, #1e70e2);
+    box-shadow: 0 4px 12px rgba(30, 112, 226, 0.3);
+}
+
+.icon-red {
+    background: linear-gradient(135deg, #ff4d4d, #e60000);
+    box-shadow: 0 4px 12px rgba(230, 0, 0, 0.3);
+}
+
+.icon-purple {
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    box-shadow: 0 4px 12px rgba(123, 31, 162, 0.3);
+}
+
+.icon-green {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.icon-orange {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+}
+
 /* Emergency Contacts / Cards */
 .contact-card {
     display: flex;
