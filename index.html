@@ -9,6 +9,13 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#f0f4f8">
+    
+    <!-- SEO & Google Search Console -->
+    <meta name="description" content="SAFE (Sistem Applikasi Flood Earlywarning) - Sistem peringatan dan monitoring ketinggian air realtime. Pantau status banjir dengan cepat dan akurat.">
+    <meta name="keywords" content="monitor banjir, peringatan dini banjir, deteksi banjir, air realtime, safetelu, safe flood monitor">
+    <meta name="author" content="SAFE Team">
+    <link rel="canonical" href="https://www.safetelu.my.id/" />
+    <meta name="google-site-verification" content="rVKAx3JKfzCn2gCBJ4EQRBmK7vRPQ0eSN3GOIUuzLOg" />
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,6 +58,102 @@
             </div>
         </header>
 
+        <!-- USER NAVIGATION -->
+        <nav class="bottom-nav" id="user-navbar" style="display: none;">
+
+            <!-- Brand: hanya tampil di sidebar desktop (hidden di mobile via CSS) -->
+            <div class="sidebar-brand">
+                <img src="logo.png" alt="Logo" class="sidebar-logo">
+                <span class="sidebar-title">SAFE</span>
+            </div>
+
+            <!-- Nav Items -->
+            <div class="nav-item active" data-target="view-monitoring">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 3L2 12h3v8h14v-8h3L12 3zm0 2.83l7 6.17v6h-14v-6l7-6.17z" />
+                </svg>
+                <span>Monitor</span>
+            </div>
+            <div class="nav-item" data-target="view-darurat">
+                <svg viewBox="0 0 24 24">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v16h20V4c0-1.1-.9-2-2-2zM9 18H7v-4H3v-2h4V8h2v4h4v2H9v4z" />
+                </svg>
+                <span>Darurat</span>
+            </div>
+            <div class="nav-item" data-target="view-lapor">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                </svg>
+                <span>Lapor</span>
+            </div>
+            <div class="nav-item" data-target="view-saran">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" />
+                </svg>
+                <span>Saran</span>
+            </div>
+
+            <!-- Profile Section: hanya tampil di sidebar desktop -->
+            <div class="sidebar-profile" id="sidebar-profile-user">
+                <div class="sidebar-profile-trigger" onclick="toggleSidebarProfileMenu('user')">
+                    <div class="sidebar-avatar" id="sidebar-avatar-user">U</div>
+                    <div class="sidebar-profile-info">
+                        <span class="sidebar-profile-name" id="sidebar-name-user">User</span>
+                        <span class="sidebar-profile-role">Pengguna</span>
+                    </div>
+                    <svg viewBox="0 0 24 24" class="sidebar-chevron"><path d="M7 10l5 5 5-5z"/></svg>
+                </div>
+                <div class="sidebar-profile-dropdown" id="sidebar-dd-user">
+                    <div class="sidebar-dd-item" onclick="openEditProfile()">✏️ Edit Profile</div>
+                    <div class="sidebar-dd-item sidebar-dd-logout" onclick="logoutUser()">🚪 Log Out</div>
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- ADMIN NAVIGATION -->
+        <nav class="bottom-nav" id="admin-navbar" style="display: none;">
+
+            <!-- Brand: hanya tampil di sidebar desktop -->
+            <div class="sidebar-brand">
+                <img src="logo.png" alt="Logo" class="sidebar-logo">
+                <span class="sidebar-title">SAFE</span>
+            </div>
+
+            <!-- Nav Items -->
+            <div class="nav-item active" data-target="view-admin-dashboard">
+                <span>🎛️</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-target="view-admin-laporan">
+                <span>📋</span>
+                <span>Laporan</span>
+            </div>
+            <div class="nav-item" data-target="view-admin-saran">
+                <span>📬</span>
+                <span>Feedback</span>
+            </div>
+
+            <!-- Profile Section: hanya tampil di sidebar desktop -->
+            <div class="sidebar-profile" id="sidebar-profile-admin">
+                <div class="sidebar-profile-trigger" onclick="toggleSidebarProfileMenu('admin')">
+                    <div class="sidebar-avatar" id="sidebar-avatar-admin">A</div>
+                    <div class="sidebar-profile-info">
+                        <span class="sidebar-profile-name" id="sidebar-name-admin">Admin</span>
+                        <span class="sidebar-profile-role">Administrator</span>
+                    </div>
+                    <svg viewBox="0 0 24 24" class="sidebar-chevron"><path d="M7 10l5 5 5-5z"/></svg>
+                </div>
+                <div class="sidebar-profile-dropdown" id="sidebar-dd-admin">
+                    <div class="sidebar-dd-item" onclick="openEditProfile()">✏️ Edit Profile</div>
+                    <div class="sidebar-dd-item sidebar-dd-logout" onclick="logoutUser()">🚪 Log Out</div>
+                </div>
+            </div>
+
+        </nav>
+
         <!-- MAIN CONTENT AREA -->
         <main class="content-area">
 
@@ -83,51 +186,6 @@
 
         </main>
 
-        <!-- USER NAVIGATION -->
-        <nav class="bottom-nav" id="user-navbar" style="display: none;">
-            <div class="nav-item active" data-target="view-monitoring">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 3L2 12h3v8h14v-8h3L12 3zm0 2.83l7 6.17v6h-14v-6l7-6.17z" />
-                </svg>
-                <span>Monitor</span>
-            </div>
-            <div class="nav-item" data-target="view-darurat">
-                <svg viewBox="0 0 24 24">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v16h20V4c0-1.1-.9-2-2-2zM9 18H7v-4H3v-2h4V8h2v4h4v2H9v4z" />
-                </svg>
-                <span>Darurat</span>
-            </div>
-            <div class="nav-item" data-target="view-lapor">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                </svg>
-                <span>Lapor</span>
-            </div>
-            <div class="nav-item" data-target="view-saran">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" />
-                </svg>
-                <span>Saran</span>
-            </div>
-        </nav>
-
-        <!-- ADMIN NAVIGATION -->
-        <nav class="bottom-nav" id="admin-navbar" style="display: none;">
-            <div class="nav-item active" data-target="view-admin-dashboard">
-                <span>🎛️</span>
-                <span>Dashboard</span>
-            </div>
-            <div class="nav-item" data-target="view-admin-laporan">
-                <span>📋</span>
-                <span>Laporan</span>
-            </div>
-            <div class="nav-item" data-target="view-admin-saran">
-                <span>📬</span>
-                <span>Feedback</span>
-            </div>
-        </nav>
     </div>
 
     <!-- Custom Popup Modal -->

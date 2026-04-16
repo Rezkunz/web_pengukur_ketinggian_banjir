@@ -1,4 +1,6 @@
-/* Water Visualization Component */
+/* =====================================================
+   WATER VISUALIZATION
+   ===================================================== */
 .water-container {
     display: flex;
     align-items: center;
@@ -12,12 +14,29 @@
 .water-tank {
     width: 90px;
     height: 220px;
-    background: #e9eff5;
+    background: linear-gradient(180deg, #dde8f0 0%, #c8dcea 100%);
     border-radius: 45px;
-    border: 4px solid #ffffff;
+    border: 4px solid rgba(255,255,255,0.9);
     position: relative;
     overflow: hidden;
-    box-shadow: inset 0 0 15px rgba(110, 147, 179, 0.2), 0 10px 20px rgba(110, 147, 179, 0.15);
+    box-shadow:
+        inset 0 0 20px rgba(110, 147, 179, 0.15),
+        0 10px 30px rgba(110, 147, 179, 0.2),
+        inset 2px 0 6px rgba(255,255,255,0.5);
+}
+
+/* Shimmer / refleksi cahaya di dinding tangki */
+.water-tank::before {
+    content: '';
+    position: absolute;
+    top: 5%;
+    left: 12px;
+    width: 10px;
+    height: 55%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 10px;
+    z-index: 5;
+    pointer-events: none;
 }
 
 .water-fill {
@@ -27,56 +46,229 @@
     width: 100%;
     height: 5%;
     background: var(--water-aman);
-    transition: height 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.8s ease;
+    transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 1s ease;
+    overflow: hidden;
 }
 
-/* Water Waves Animation */
-.wave {
+/* ── Wave menggunakan SVG path yang smooth ── */
+.wave-container {
     position: absolute;
-    top: -8px;
-    left: 0;
+    top: -18px;
+    left: -10%;
+    width: 120%;
+    height: 22px;
+    overflow: hidden;
+}
+
+.wave-svg {
     width: 200%;
-    height: 14px;
-    background: inherit;
-    border-radius: 40%;
-    animation: waveAnimation 3s infinite linear;
-    opacity: 0.8;
+    height: 100%;
+    animation: waveSvg 3s infinite linear;
+    fill: inherit;
+    opacity: 0.9;
 }
 
-.wave2 {
-    top: -6px;
-    animation: waveAnimation 4s infinite linear reverse;
+.wave-svg-2 {
+    position: absolute;
+    top: 4px;
+    left: -10%;
+    width: 200%;
+    height: 100%;
+    animation: waveSvg2 4.5s infinite linear;
+    fill: inherit;
     opacity: 0.5;
-    left: -50%;
 }
 
-@keyframes waveAnimation {
-    0% {
-        transform: translateX(0) scaleY(1);
-    }
-    50% {
-        transform: translateX(-25%) scaleY(1.3);
-    }
-    100% {
-        transform: translateX(-50%) scaleY(1);
-    }
+@keyframes waveSvg {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.3);
-        opacity: 0.7;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
+@keyframes waveSvg2 {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(50%); }
 }
 
+/* ── Bubbles yang naik di dalam air ── */
+.bubble {
+    position: absolute;
+    bottom: 10%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    animation: bubbleRise var(--dur, 3s) ease-in infinite var(--delay, 0s);
+}
+
+@keyframes bubbleRise {
+    0%   { transform: translateY(0) scale(1); opacity: 0.6; }
+    80%  { opacity: 0.4; }
+    100% { transform: translateY(-200px) scale(0.6); opacity: 0; }
+}
+
+/* ── Ripple effect di permukaan air ── */
+.water-ripple {
+    position: absolute;
+    top: -2px;
+    left: 20%;
+    width: 12px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+    animation: ripple 2s ease-out infinite;
+}
+.water-ripple:nth-child(2) { left: 55%; animation-delay: 0.8s; width: 8px; }
+.water-ripple:nth-child(3) { left: 35%; animation-delay: 1.5s; width: 10px; }
+
+@keyframes ripple {
+    0%   { transform: scaleX(1); opacity: 0.5; }
+    100% { transform: scaleX(3); opacity: 0; }
+}
+
+/* ── Pulse saat SIAGA 1 ── */
+.water-fill.siaga1-pulse {
+    animation: waterPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes waterPulse {
+    from { filter: brightness(1); }
+    to   { filter: brightness(1.15); }
+}
+
+/* ── Freeze water animation saat offline ── */
+.water-tank.sensor-offline .wave-svg,
+.water-tank.sensor-offline .wave-svg-2,
+.water-tank.sensor-offline .bubble {
+    animation-play-state: paused;
+}
+
+/* ── Overlay pattern saat sensor offline ── */
+.water-tank.sensor-offline::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(150,150,150,0.06) 0px, rgba(150,150,150,0.06) 4px,
+        transparent 4px, transparent 12px
+    );
+    z-index: 4;
+    border-radius: inherit;
+}
+
+/* =====================================================
+   SENSOR OFFLINE BANNER
+   ===================================================== */
+.offline-banner {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(40,40,40,0.96) 0%, rgba(28,28,28,0.96) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    margin-bottom: 4px;
+    animation: offlinePulseIn 0.4s ease;
+}
+
+.offline-banner.visible {
+    display: flex;
+}
+
+@keyframes offlinePulseIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.offline-icon-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(231, 76, 60, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    animation: offlineIconBlink 2s ease-in-out infinite;
+}
+
+@keyframes offlineIconBlink {
+    0%, 100% { background: rgba(231, 76, 60, 0.15); }
+    50%       { background: rgba(231, 76, 60, 0.30); }
+}
+
+.offline-icon-wrap svg {
+    width: 22px;
+    height: 22px;
+    fill: #e74c3c;
+}
+
+.offline-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.offline-text strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #f0f0f0;
+    margin-bottom: 2px;
+}
+
+.offline-text span {
+    font-size: 0.78rem;
+    color: #aaa;
+}
+
+.offline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e74c3c;
+    flex-shrink: 0;
+    animation: offlineDotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes offlineDotPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(231,76,60,0.5); }
+    70%  { box-shadow: 0 0 0 8px rgba(231,76,60,0); }
+    100% { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
+}
+
+/* Admin: sensor status badge di summary card */
+.sensor-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-top: 8px;
+}
+
+.sensor-status-badge.online {
+    background: rgba(76,175,80,0.15);
+    color: #4caf50;
+}
+
+.sensor-status-badge.offline {
+    background: rgba(231,76,60,0.15);
+    color: #e74c3c;
+    box-shadow: 0 0 0 0 rgba(231,76,60,0.4);
+    animation: offlineDotPulse 1.5s ease-in-out infinite;
+}
+
+.sensor-status-badge .badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* =====================================================
+   LEVEL INFO
+   ===================================================== */
 .level-info {
     display: flex;
     flex-direction: column;
@@ -100,7 +292,11 @@
     font-weight: 700;
     color: var(--brand-dark);
     line-height: 1;
+    transition: color 0.5s ease;
 }
+
+#current-level.siaga1 { color: var(--status-siaga1); }
+#current-level.siaga2 { color: var(--status-siaga2); }
 
 .unit {
     font-size: 1.1rem;
@@ -108,7 +304,9 @@
     font-weight: 600;
 }
 
-/* Alert Section */
+/* =====================================================
+   ALERT SECTION
+   ===================================================== */
 .alert-section {
     display: flex;
     align-items: center;
@@ -116,39 +314,21 @@
     transition: all 0.4s ease;
 }
 
-.alert-section.status-aman .alert-icon {
-    background: rgba(76, 175, 80, 0.15);
-    color: var(--status-aman);
-}
+.alert-section.status-aman   .alert-icon { background: rgba(76,175,80,0.15);  color: var(--status-aman); }
+.alert-section.status-siaga2 .alert-icon { background: rgba(243,156,18,0.15); color: var(--status-siaga2); }
+.alert-section.status-siaga1 .alert-icon { background: rgba(231,76,60,0.15);  color: var(--status-siaga1); }
+.alert-section.status-offline .alert-icon { background: rgba(150,150,150,0.15); color: #888; }
 
-.alert-section.status-siaga2 .alert-icon {
-    background: rgba(243, 156, 18, 0.15);
-    color: var(--status-siaga2);
-}
-
-.alert-section.status-siaga1 .alert-icon {
-    background: rgba(231, 76, 60, 0.15);
-    color: var(--status-siaga1);
-}
-
-.alert-section.status-aman {
-    border-left: 5px solid var(--status-aman);
-}
-
-.alert-section.status-siaga2 {
-    border-left: 5px solid var(--status-siaga2);
-}
-
-.alert-section.status-siaga1 {
-    border-left: 5px solid var(--status-siaga1);
-    animation: shake 0.6s cubic-bezier(.36, .07, .19, .97) both;
-}
+.alert-section.status-aman    { border-left: 5px solid var(--status-aman); }
+.alert-section.status-siaga2  { border-left: 5px solid var(--status-siaga2); }
+.alert-section.status-siaga1  { border-left: 5px solid var(--status-siaga1); animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
+.alert-section.status-offline { border-left: 5px solid #888; opacity: 0.7; }
 
 @keyframes shake {
-    10%, 90% { transform: translate3d(-1px, 0, 0); }
-    20%, 80% { transform: translate3d(2px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-    40%, 60% { transform: translate3d(4px, 0, 0); }
+    10%, 90% { transform: translate3d(-1px,0,0); }
+    20%, 80%  { transform: translate3d(2px,0,0); }
+    30%, 50%, 70% { transform: translate3d(-4px,0,0); }
+    40%, 60%  { transform: translate3d(4px,0,0); }
 }
 
 .alert-icon {
@@ -161,20 +341,12 @@
     transition: all 0.3s ease;
 }
 
-.alert-text h3 {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
+.alert-text h3 { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
+.alert-text p  { font-size: 1.3rem; font-weight: 700; margin-top: 2px; color: var(--text-primary); }
 
-.alert-text p {
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin-top: 2px;
-    color: var(--text-primary);
-}
-
-/* Chart Section */
+/* =====================================================
+   CHART SECTION
+   ===================================================== */
 .chart-section h3 {
     font-size: 0.95rem;
     color: var(--text-secondary);
@@ -182,14 +354,38 @@
     margin-bottom: 12px;
 }
 
-.chart-container {
-    width: 100%;
-    height: 200px;
-}
+.chart-container { width: 100%; height: 200px; }
 
 .refresh-time {
     text-align: center;
     font-size: 0.8rem;
     color: var(--text-secondary);
     margin-top: 10px;
+}
+
+/* =====================================================
+   RESPONSIVE - TABLET (768px+)
+   ===================================================== */
+@media (min-width: 768px) {
+    .water-container { gap: 40px; }
+    .water-tank { width: 110px; height: 260px; }
+    #current-level { font-size: 4.5rem; }
+    .chart-container { height: 260px; }
+    #view-monitoring > * { max-width: 100%; }
+    .offline-banner { padding: 16px 22px; border-radius: 16px; gap: 16px; }
+    .offline-icon-wrap { width: 46px; height: 46px; }
+    .offline-text strong { font-size: 1rem; }
+    .offline-text span   { font-size: 0.82rem; }
+}
+
+/* =====================================================
+   RESPONSIVE - DESKTOP (1024px+)
+   ===================================================== */
+@media (min-width: 1024px) {
+    .water-container { gap: 48px; }
+    .water-tank { width: 120px; height: 280px; border-radius: 60px; }
+    #current-level { font-size: 5rem; }
+    .chart-container { height: 300px; }
+    .alert-icon { width: 60px; height: 60px; }
+    .alert-text p { font-size: 1.5rem; }
 }

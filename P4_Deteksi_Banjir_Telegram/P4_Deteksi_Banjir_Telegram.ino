@@ -93,9 +93,10 @@ void loop() {
   // 2. Update data ke Firebase DB Web
   if (millis() - lastFirebaseUpdate >= firebaseInterval) {
     if(d_cm > 0) {
-      // Kirim level (tinggi air) agar web mudah menampilkan persentase tangki
+      // Kirim level (tinggi air)
       if (Firebase.setInt(fbdo, "/sensor_data/water_level", level)) {
-        // Sukses
+        // Sukses - kirim juga timestamp agar web dapat deteksi sensor online/offline
+        Firebase.setInt(fbdo, "/sensor_data/ts", (int)(millis() / 1000)); // dalam detik
       } else {
         Serial.println("Gagal terhubung Firebase: " + fbdo.errorReason());
       }

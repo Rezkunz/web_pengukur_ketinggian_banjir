@@ -378,3 +378,79 @@
     color: #a0a0a0;
     line-height: 1.5;
 }
+
+/* =====================================================
+   RESPONSIVE COMPONENTS - TABLET (768px+)
+   ===================================================== */
+@media (min-width: 768px) {
+    .custom-modal-box {
+        width: 400px;
+    }
+
+    .success-modal-box {
+        width: 380px;
+    }
+
+    .glass-panel {
+        padding: 24px 28px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        padding: 14px;
+        font-size: 1rem;
+    }
+
+    .btn-submit {
+        padding: 16px;
+        font-size: 1.05rem;
+    }
+
+    .contact-card {
+        gap: 20px;
+    }
+
+    .card-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 2rem;
+    }
+
+    .card-content h3 {
+        font-size: 1.1rem;
+    }
+
+    .card-content p {
+        font-size: 0.9rem;
+    }
+
+    .btn-call {
+        padding: 8px 18px;
+        font-size: 0.9rem;
+    }
+}
+
+/* =====================================================
+   RESPONSIVE COMPONENTS - DESKTOP (1024px+)
+   ===================================================== */
+@media (min-width: 1024px) {
+    .glass-panel {
+        padding: 28px 32px;
+        border-radius: 24px;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        margin-bottom: 24px;
+    }
+
+    .custom-modal-box {
+        width: 440px;
+    }
+
+    /* Cards grid layout on desktop */
+    .contact-card {
+        gap: 24px;
+    }
+}

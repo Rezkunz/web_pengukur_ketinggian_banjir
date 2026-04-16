@@ -53,6 +53,276 @@ body {
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.05);
 }
 
+/* Mobile: atur urutan visual — header atas, konten tengah, nav bawah */
+header        { order: 0; }
+.bottom-nav   { order: 2; }   /* nav ke bawah meskipun di DOM sebelum main */
+.content-area { order: 1; }   /* konten di tengah */
+
+/* Mobile: sembunyikan elemen sidebar yang hanya untuk desktop */
+.sidebar-brand,
+.sidebar-profile { display: none; }
+
+
+/* =====================================================
+   RESPONSIVE - TABLET (768px+)
+   ===================================================== */
+@media (min-width: 768px) {
+    body {
+        align-items: stretch;
+    }
+
+    .app-container {
+        max-width: 100% !important;
+        height: 100vh;
+        flex-direction: row !important;
+        flex-wrap: nowrap;
+    }
+
+    /* Reset order untuk tablet — flex-direction: row jadi urutan DOM */
+    .bottom-nav   { order: 0 !important; }
+    .content-area { order: 0 !important; }
+
+    header {
+        display: none !important;
+    }
+
+    /* ── SIDEBAR NAV ── */
+    /* display dikontrol oleh JS (style="display:flex" atau "display:none") */
+    /* kita hanya override layout properties */
+    .bottom-nav {
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        top: auto !important;
+        width: 220px !important;
+        height: 100vh !important;
+        flex-shrink: 0 !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        border-right: 1px solid rgba(0,0,0,0.07);
+        border-top: none;
+        box-shadow: 2px 0 20px rgba(0, 0, 0, 0.05);
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 10;
+        /* Tidak ubah display — dikontrol JS */
+    }
+
+    /* ── SIDEBAR BRAND (logo + nama app) ── */
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 24px 20px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.07);
+        flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 2px 8px rgba(71, 106, 138, 0.25);
+        flex-shrink: 0;
+    }
+
+    .sidebar-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--brand-dark);
+        letter-spacing: 0.5px;
+    }
+
+    /* ── SIDEBAR PROFILE (profile di bawah sidebar) ── */
+    .sidebar-profile {
+        display: flex;
+        flex-direction: column;
+        margin-top: auto;
+        border-top: 1px solid rgba(0,0,0,0.07);
+        flex-shrink: 0;
+    }
+
+    .sidebar-profile-trigger {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .sidebar-profile-trigger:hover {
+        background: rgba(110, 147, 179, 0.08);
+    }
+
+    .sidebar-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    }
+
+    .sidebar-profile-info {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .sidebar-profile-name {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .sidebar-profile-role {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .sidebar-chevron {
+        width: 20px;
+        height: 20px;
+        fill: var(--text-secondary);
+        flex-shrink: 0;
+        transition: transform 0.2s;
+    }
+
+    .sidebar-profile-dropdown {
+        display: none;
+        background: rgba(110, 147, 179, 0.06);
+        border-top: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .sidebar-profile-dropdown.open {
+        display: block;
+    }
+
+    .sidebar-dd-item {
+        padding: 12px 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        color: var(--text-primary);
+        transition: background 0.2s;
+    }
+
+    .sidebar-dd-item:hover {
+        background: rgba(110, 147, 179, 0.12);
+    }
+
+    .sidebar-dd-logout {
+        color: #e74c3c;
+    }
+
+    /* ── NAV ITEMS: paksa jadi horizontal list di sidebar ── */
+    .nav-item {
+        flex: 0 0 auto !important;       /* jangan stretch */
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: row !important;   /* icon + label sejajar */
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 14px !important;
+        padding: 15px 24px !important;
+        font-size: 0.9rem !important;
+        border-radius: 0 !important;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .nav-item:hover {
+        background: rgba(110, 147, 179, 0.08);
+        color: var(--brand-primary);
+    }
+
+    .nav-item svg {
+        width: 22px !important;
+        height: 22px !important;
+        flex-shrink: 0 !important;
+        fill: currentColor;
+    }
+
+    .nav-item span {
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap;
+    }
+
+    /* Emoji icon di admin nav */
+    .nav-item > span:first-child:not(:last-child) {
+        font-size: 1.2rem !important;
+    }
+
+    .nav-item.active {
+        background: rgba(110, 147, 179, 0.13) !important;
+        color: var(--brand-primary) !important;
+        border-left: 3px solid var(--brand-primary);
+        padding-left: 21px !important;
+    }
+
+    .nav-item.active svg {
+        transform: none !important;
+    }
+
+    /* ── CONTENT AREA ── */
+    .content-area {
+        flex: 1 !important;
+        padding: 32px 40px !important;
+        padding-bottom: 32px !important;
+        overflow-y: auto;
+        height: 100vh;
+    }
+
+    /* Admin navbar juga menjadi sidebar */
+    #admin-navbar {
+        width: 220px !important;
+    }
+
+    /* Profile wrapper di header sudah hidden */
+    #profile-wrapper {
+        display: none !important;
+    }
+}
+
+/* =====================================================
+   RESPONSIVE - DESKTOP (1024px+)
+   ===================================================== */
+@media (min-width: 1024px) {
+    .app-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.08);
+    }
+
+    .bottom-nav {
+        width: 260px !important;
+    }
+
+    #admin-navbar {
+        width: 260px !important;
+    }
+
+    .content-area {
+        padding: 40px 56px !important;
+    }
+}
+
 /* Header */
 header {
     background: #ffffff;

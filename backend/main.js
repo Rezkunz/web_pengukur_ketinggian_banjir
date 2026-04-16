@@ -39,6 +39,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('header-name').textContent = userData.nama;
             document.getElementById('header-avatar').textContent = userData.nama.charAt(0).toUpperCase();
 
+            // Sync ke sidebar profile (desktop)
+            const initial = userData.nama.charAt(0).toUpperCase();
+            ['user', 'admin'].forEach(role => {
+                const sidebarAvatar = document.getElementById(`sidebar-avatar-${role}`);
+                const sidebarName   = document.getElementById(`sidebar-name-${role}`);
+                if (sidebarAvatar) sidebarAvatar.textContent = initial;
+                if (sidebarName)   sidebarName.textContent   = userData.nama;
+            });
+
             // Admin Setup (One off)
             if (user.email === 'rezads@gmail.com' && userData.role !== 'admin') {
                  if(database) {

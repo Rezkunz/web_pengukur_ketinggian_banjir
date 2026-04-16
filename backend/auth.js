@@ -1,17 +1,16 @@
 // Profil Management
-function toggleProfileMenu() {
-    const d = document.getElementById('profile-dropdown');
-    d.style.display = d.style.display === 'none' ? 'block' : 'none';
-}
 
 async function openEditProfile() {
-    toggleProfileMenu(); // Close dropdown
+    // Tutup semua dropdown (header + sidebar)
+    const headerDd = document.getElementById('profile-dropdown');
+    if (headerDd) headerDd.style.display = 'none';
+    document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.sidebar-chevron').forEach(el => el.style.transform = '');
+
     const viewEdit = document.getElementById('view-edit-profile');
     
-    // Fetch view if not loaded
-    if(!viewEdit.innerHTML) {
-        viewEdit.innerHTML = await fetch('views/edit-profile.html?v=1').then(r => r.text());
-    }
+    // Selalu reload untuk mendapatkan versi terbaru
+    viewEdit.innerHTML = await fetch('views/edit-profile.html?v=' + Date.now()).then(r => r.text());
     
     // Hide all other views
     document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
@@ -53,19 +52,34 @@ async function saveProfile(e) {
     const user = auth.currentUser;
     if(!user) return;
     
-    const newName = document.getElementById('edit-nama').value;
+    const newName = document.getElementById('edit-nama').value.trim();
+    if (!newName) return;
+
+    const initial = newName.charAt(0).toUpperCase();
     
     if(database) {
         try {
             await database.ref('users/' + user.uid).update({ nama: newName });
             
-            // Sync header Name immediately
-            document.getElementById('header-name').textContent = newName;
-            document.getElementById('header-avatar').textContent = newName.charAt(0).toUpperCase();
+            // Sync header (mobile)
+            const headerName   = document.getElementById('header-name');
+            const headerAvatar = document.getElementById('header-avatar');
+            if (headerName)   headerName.textContent   = newName;
+            if (headerAvatar) headerAvatar.textContent = initial;
+
+            // Sync edit-profile avatar
             const editAvatar = document.getElementById('edit-avatar');
-            if (editAvatar) editAvatar.textContent = newName.charAt(0).toUpperCase();
+            if (editAvatar) editAvatar.textContent = initial;
+
+            // Sync sidebar profile (desktop)
+            ['user', 'admin'].forEach(role => {
+                const sidebarAvatar = document.getElementById(`sidebar-avatar-${role}`);
+                const sidebarName   = document.getElementById(`sidebar-name-${role}`);
+                if (sidebarAvatar) sidebarAvatar.textContent = initial;
+                if (sidebarName)   sidebarName.textContent   = newName;
+            });
             
-            showSuccessModal('Success', 'Profil berhasil diperbarui!');
+            showSuccessModal('Berhasil!', 'Profil berhasil diperbarui!');
             closeEditProfile();
         } catch(err) {
             showCustomModal('SIAGA1', 'Gagal', err.message);
@@ -135,7 +149,11 @@ function handleRegister(e) {
 }
 
 function logoutUser() {
-    toggleProfileMenu();
+    // Tutup semua dropdown dulu
+    const headerDd = document.getElementById('profile-dropdown');
+    if (headerDd) headerDd.style.display = 'none';
+    document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
+    
     auth.signOut();
     const lForm = document.getElementById('form-login');
     const rForm = document.getElementById('form-register');

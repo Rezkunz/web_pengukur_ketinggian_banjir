@@ -79,3 +79,42 @@ function sendNotification(title, options) {
         }
     }
 }
+
+// Toggle dropdown profile di sidebar (desktop/tablet)
+function toggleSidebarProfileMenu(role) {
+    const dd = document.getElementById(`sidebar-dd-${role}`);
+    const chevron = document.querySelector(`#sidebar-profile-${role} .sidebar-chevron`);
+    if (!dd) return;
+
+    const isOpen = dd.classList.contains('open');
+    // Tutup semua dropdown sidebar lain dulu
+    document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.sidebar-chevron').forEach(el => el.style.transform = '');
+
+    if (!isOpen) {
+        dd.classList.add('open');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    }
+}
+
+// Toggle dropdown profile di header (mobile)
+function toggleProfileMenu() {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Tutup dropdown jika klik di luar
+document.addEventListener('click', (e) => {
+    // Sidebar profile dropdowns
+    if (!e.target.closest('.sidebar-profile')) {
+        document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.sidebar-chevron').forEach(el => el.style.transform = '');
+    }
+    // Header profile dropdown
+    if (!e.target.closest('.profile-menu-wrapper')) {
+        const dd = document.getElementById('profile-dropdown');
+        if (dd) dd.style.display = 'none';
+    }
+});
