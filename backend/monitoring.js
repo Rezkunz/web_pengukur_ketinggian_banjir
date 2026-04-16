@@ -17,7 +17,7 @@ let chartIntervalTimer = null;
 // Ambil sensor_data/ts dua kali dengan jeda 2 detik.
 // Jika nilai berubah  → sensor ONLINE (NodeMCU masih kirim data).
 // Jika nilai sama    → sensor OFFLINE (tidak ada data baru).
-const POLL_INTERVAL_MS = 60 * 1000; // polling setiap 60 detik
+const POLL_INTERVAL_MS = 20 * 1000; // polling dipercepat menjadi 20 detik untuk respons lebih cepat
 const POLL_GAP_MS      = 2000;       // jeda antara dua sampling (2 detik)
 let offlinePollTimer   = null;
 let isSensorOffline    = false;
@@ -206,6 +206,7 @@ function updateUI(waterLevel) {
     const alertMessageEl = document.getElementById('alert-message');
     const lastUpdateEl = document.getElementById('last-update');
     const adminStatusAir = document.getElementById('admin-status-air');
+    const adminSensorTime = document.getElementById('admin-sensor-time');
 
     if (currentLevelEl) currentLevelEl.textContent = Math.round(waterLevel);
 
@@ -256,7 +257,9 @@ function updateUI(waterLevel) {
     }
 
     const now = new Date();
-    if (lastUpdateEl) lastUpdateEl.textContent = now.toLocaleTimeString('id-ID') + ' WIB';
+    const timeString = now.toLocaleTimeString('id-ID') + ' WIB';
+    if (lastUpdateEl) lastUpdateEl.textContent = timeString;
+    if (adminSensorTime) adminSensorTime.textContent = timeString;
 }
 
 // ─────────────────────────────────────────────
@@ -449,6 +452,10 @@ function startDataListener() {
         if (data === null) return;
 
         currentWaterLevel = data;
+        
+        // Langsung set ONLINE jika data masuk (menghilangkan delay respon)
+        if (isSensorOffline) setOfflineState(false);
+        
         updateUI(data);
 
         // 5. Smart save chart (maks 1x per 15 menit)
