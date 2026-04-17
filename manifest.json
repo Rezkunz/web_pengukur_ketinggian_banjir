@@ -1,6 +1,6 @@
 {
-  "name": "Monitor Banjir",
-  "short_name": "Banjir",
+  "name": "SAFE (Sistem Aplikasi Flood Early Warning)",
+  "short_name": "SAFE",
   "description": "Sistem peringatan dan monitoring ketinggian air realtime",
   "start_url": "./index.html",
   "display": "standalone",
@@ -9,14 +9,10 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNiODJmNiI+PHBhdGggZD0iTTEyIDIuNjlsNS42NiA1LjY2YTggOCAwIDEgMS0xMS4zMSAweiIvPjwvc3ZnPg==",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    },
-    {
-       "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNiODJmNiI+PHBhdGggZD0iTTEyIDIuNjlsNS42NiA1LjY2YTggOCAwIDEgMS0xMS4zMSAweiIvPjwvc3ZnPg==",
-       "sizes": "512x512",
-       "type": "image/svg+xml"
+      "src": "logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
