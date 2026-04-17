@@ -1,31 +1,27 @@
 // Water Monitoring and Charting Logic
 const THRESHOLDS = {
-    SIAGA1: 250,
-    SIAGA2: 200,
-    MAX_TANK: 400
+    SIAGA1: 200, // 2 meter = Siaga 1 (Waspada) → Kuning
+    SIAGA2: 300, // 3 meter = Siaga 2 (Bahaya)  → Merah
+    MAX_TANK: 400 // 4 meter = Ketinggian Maksimal Tangki
 };
 
 let lastNotifState = 'AMAN';
 
-// Chart
+// Chart & Global State
 let waterChart;
 let currentWaterLevel = 0;
 let chartIntervalTimer = null;
 
-// ── Sensor Offline Detection ──
-// Strategi: polling database tiap 60 detik.
-// Ambil sensor_data/ts dua kali dengan jeda 2 detik.
-// Jika nilai berubah  → sensor ONLINE (NodeMCU masih kirim data).
-// Jika nilai sama    → sensor OFFLINE (tidak ada data baru).
-const POLL_INTERVAL_MS = 20 * 1000; // polling dipercepat menjadi 20 detik untuk respons lebih cepat
-const POLL_GAP_MS      = 2000;       // jeda antara dua sampling (2 detik)
+// Sensor Offline Detection Logic (20s polling)
+const POLL_INTERVAL_MS = 20 * 1000;
+const POLL_GAP_MS      = 2000;
 let offlinePollTimer   = null;
 let isSensorOffline    = false;
-let lastOfflineCheckAt = null;       // kapan terakhir polling dilakukan
+let lastOfflineCheckAt = null;
 
 const CHART_HISTORY_PATH = 'sensor_data/chart_history';
-const CHART_MAX_POINTS = 8; // 8 titik = 2 jam data (8 × 15 menit)
-const CHART_INTERVAL_MS = 15 * 60 * 1000; // 15 menit dalam milidetik
+const CHART_MAX_POINTS = 8; 
+const CHART_INTERVAL_MS = 15 * 60 * 1000; // 15 Minutes
 
 // Format timestamp ke jam:menit (WIB)
 function formatTimestamp(ts) {
@@ -35,9 +31,7 @@ function formatTimestamp(ts) {
     return `${h}:${m}`;
 }
 
-// ─────────────────────────────────────────────
-// CHART INIT
-// ─────────────────────────────────────────────
+// Initialize Chart (User/Admin)
 function initChart(isAdmin = false) {
     const canvasId = isAdmin ? 'adminWaterChart' : 'waterChart';
     const canvasEl = document.getElementById(canvasId);
@@ -59,12 +53,12 @@ function initChart(isAdmin = false) {
             datasets: [{
                 label: 'Tinggi Air (cm)',
                 data: new Array(CHART_MAX_POINTS).fill(null),
-                borderColor: '#6e93b3',
-                backgroundColor: 'rgba(110, 147, 179, 0.15)',
+                borderColor: '#0ea5e9',
+                backgroundColor: 'rgba(14, 165, 233, 0.15)',
                 tension: 0.4,
                 fill: true,
                 borderWidth: 2.5,
-                pointBackgroundColor: '#476a8a',
+                pointBackgroundColor: '#0369a1',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointRadius: 5,
@@ -85,23 +79,25 @@ function initChart(isAdmin = false) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 350,
+                    max: 400, // 4 meter max
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { callback: v => v + 'cm', font: { size: 11 } }
+                    ticks: {
+                        color: '#475569',
+                        callback: v => v + 'cm',
+                        font: { size: 11 },
+                        stepSize: 100
+                    }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { font: { size: 11 } }
+                    ticks: { color: '#475569', font: { size: 11 } }
                 }
             }
         }
     });
 }
 
-// ─────────────────────────────────────────────
-// REAL-TIME CHART LISTENER (baca dari Firebase)
-// Semua device akan mendapat data & label waktu yang sama secara real-time.
-// ─────────────────────────────────────────────
+// Real-time Chart Listener
 function startChartHistoryListener() {
     if (!database) return;
 
@@ -131,11 +127,7 @@ function startChartHistoryListener() {
         });
 }
 
-// ─────────────────────────────────────────────
-// SMART SAVE: Simpan ke Firebase hanya jika sudah
-// lewat 15 menit dari entri terakhir, atau belum ada data.
-// Dipanggil saat data sensor baru masuk DAN dari setInterval.
-// ─────────────────────────────────────────────
+// Save Chart Point (Max 1x per 15 minutes)
 function saveChartPoint(value) {
     if (!database || value === null || value === undefined) return;
 
@@ -176,10 +168,7 @@ function maybeSaveChartPoint(value) {
     });
 }
 
-// ─────────────────────────────────────────────
-// AUTO-SAVE TIMER: Pastikan data tersimpan tiap 15 menit
-// meskipun tidak ada perubahan sensor masuk.
-// ─────────────────────────────────────────────
+// Auto-Save Timer
 function startChartAutoSaveTimer() {
     if (chartIntervalTimer) clearInterval(chartIntervalTimer);
     chartIntervalTimer = setInterval(() => {
@@ -208,7 +197,9 @@ function updateUI(waterLevel) {
     const adminStatusAir = document.getElementById('admin-status-air');
     const adminSensorTime = document.getElementById('admin-sensor-time');
 
-    if (currentLevelEl) currentLevelEl.textContent = Math.round(waterLevel);
+    if (currentLevelEl) {
+        currentLevelEl.textContent = Math.round(waterLevel);
+    }
 
     const percentage = calculatePercentage(waterLevel, THRESHOLDS.MAX_TANK);
     if (waterFillEl) waterFillEl.style.height = `${percentage}%`;
@@ -217,27 +208,33 @@ function updateUI(waterLevel) {
 
     let currentState = 'AMAN';
 
-    // SIAGA 2 (≥250cm) lebih bahaya dari SIAGA 1 (≥200cm)
-    // Cek threshold tertinggi dulu
-    if (waterLevel >= THRESHOLDS.SIAGA1) {
-        // Level ≥ 250cm → SIAGA 2 (paling bahaya, wajib evakuasi)
-        if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-siaga1)';
-        if (alertPanelEl) alertPanelEl.classList.add('status-siaga1');
-        if (alertMessageEl) { alertMessageEl.textContent = 'SIAGA 2 (Bahaya!)'; alertMessageEl.style.color = 'var(--status-siaga1)'; }
-        if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 2'; adminStatusAir.style.color = '#e74c3c'; }
-        currentState = 'SIAGA2';
-    } else if (waterLevel >= THRESHOLDS.SIAGA2) {
-        // Level ≥ 200cm → SIAGA 1 (waspada, himbauan evakuasi)
+    // Cek dari level tertinggi ke bawah
+    if (waterLevel >= THRESHOLDS.SIAGA2) {
+        // ≥ 300cm (3m) → SIAGA 2 (Bahaya, evakuasi)
         if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-siaga2)';
         if (alertPanelEl) alertPanelEl.classList.add('status-siaga2');
-        if (alertMessageEl) { alertMessageEl.textContent = 'SIAGA 1 (Waspada)'; alertMessageEl.style.color = 'var(--status-siaga2)'; }
-        if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 1'; adminStatusAir.style.color = '#f1c40f'; }
+        if (alertMessageEl) {
+            alertMessageEl.textContent = 'SIAGA 2 (Bahaya!)';
+            alertMessageEl.style.color = 'var(--status-siaga2)';
+        }
+        if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 2'; adminStatusAir.style.color = 'var(--status-siaga2)'; }
+        currentState = 'SIAGA2';
+    } else if (waterLevel >= THRESHOLDS.SIAGA1) {
+        // ≥ 200cm (2m) → SIAGA 1 (Waspada, himbauan)
+        if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-siaga1)';
+        if (alertPanelEl) alertPanelEl.classList.add('status-siaga1');
+        if (alertMessageEl) {
+            alertMessageEl.textContent = 'SIAGA 1 (Waspada)';
+            alertMessageEl.style.color = 'var(--status-siaga1)';
+        }
+        if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 1'; adminStatusAir.style.color = 'var(--status-siaga1)'; }
         currentState = 'SIAGA1';
     } else {
+        // < 200cm → Aman
         if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-aman)';
         if (alertPanelEl) alertPanelEl.classList.add('status-aman');
         if (alertMessageEl) { alertMessageEl.textContent = 'Aman'; alertMessageEl.style.color = 'var(--status-aman)'; }
-        if (adminStatusAir) { adminStatusAir.textContent = 'Aman'; adminStatusAir.style.color = '#58d68d'; }
+        if (adminStatusAir) { adminStatusAir.textContent = 'Aman'; adminStatusAir.style.color = 'var(--status-aman)'; }
         currentState = 'AMAN';
     }
 

@@ -1,40 +1,262 @@
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height: 70vh; padding: 20px;">
-                    <div class="glass-panel form-panel" style="width: 100%; max-width: 400px; padding: 30px;">
-                        
-                        <!-- Toggle Headers -->
-                        <div style="display: flex; gap: 20px; border-bottom: 2px solid rgba(0,0,0,0.1); margin-bottom: 20px; padding-bottom: 5px;">
-                            <h2 id="tab-login" onclick="switchAuthMode('login')" style="flex: 1; text-align: center; cursor: pointer; color: #2c3e50; font-size: 1.2rem; transition: 0.3s; margin: 0; padding-bottom: 5px; border-bottom: 2px solid #58d68d;">Login</h2>
-                            <h2 id="tab-register" onclick="switchAuthMode('register')" style="flex: 1; text-align: center; cursor: pointer; color: #95a5a6; font-size: 1.2rem; transition: 0.3s; margin: 0; padding-bottom: 5px; border-bottom: 2px solid transparent;">Register</h2>
-                        </div>
+<style>
+/* Spacer-inspired Auth UI */
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0; /* Fully binds to viewport on mobile & desktop */
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+    overflow: hidden;
+}
 
-                        <!-- Login Form -->
-                        <form id="form-login" onsubmit="handleLogin(event)">
-                            <div class="form-group">
-                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Email</label>
-                                <input type="email" id="login-email" placeholder="user@contoh.com" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:15px;">
-                            </div>
-                            <div class="form-group">
-                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Password</label>
-                                <input type="password" id="login-password" placeholder="••••••••" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:20px;">
-                            </div>
-                            <button type="submit" class="btn-submit" style="width: 100%; font-weight: bold;">Sign In</button>
-                        </form>
+/* Flood Waves Background */
+.auth-bg-waves {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    z-index: 2;
+    pointer-events: none;
+}
 
-                        <!-- Register Form -->
-                        <form id="form-register" onsubmit="handleRegister(event)" style="display: none;">
-                            <div class="form-group">
-                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Nama Lengkap</label>
-                                <input type="text" id="register-name" placeholder="Nama Anda" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:15px;">
-                            </div>
-                            <div class="form-group">
-                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Email</label>
-                                <input type="email" id="register-email" placeholder="user@contoh.com" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:15px;">
-                            </div>
-                            <div class="form-group">
-                                <label style="text-align: left; display: block; color:#2c3e50; margin-bottom: 5px; font-weight:600;">Password</label>
-                                <input type="password" id="register-password" minlength="6" placeholder="Minimal 6 karakter" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; background:rgba(255,255,255,0.8); color:#333; margin-bottom:20px;">
-                            </div>
-                            <button type="submit" class="btn-submit" style="width: 100%; font-weight: bold;">Sign Up</button>
-                        </form>
-                    </div>
-                </div>
+.auth-wave-layer {
+    width: 200vw; /* Double screen width for seamless loop */
+    height: 100%;
+    position: absolute;
+    left: 0;
+}
+
+.layer-1 {
+    bottom: -15vh;
+    fill: #0ea5e9;
+    opacity: 0.8;
+    animation: waveAnimRight 12s infinite linear;
+}
+
+.layer-2 {
+    bottom: -5vh;
+    fill: #38bdf8;
+    opacity: 0.5;
+    animation: waveAnimLeft 18s infinite linear;
+    height: 110%;
+}
+
+.layer-3 {
+    bottom: 5vh;
+    fill: #7dd3fc;
+    opacity: 0.3;
+    animation: waveAnimRight 25s infinite linear;
+    height: 120%;
+}
+
+@keyframes waveAnimRight {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+@keyframes waveAnimLeft {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+}
+
+.auth-panel {
+    width: 100%;
+    max-width: 400px;
+    background: var(--bg-panel);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 40px 32px;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    z-index: 10;
+}
+
+.auth-header-wrapper {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-header-wrapper img {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 16px;
+    mix-blend-mode: multiply; /* Menghilangkan background putih */
+}
+
+.auth-header-wrapper h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.auth-header-wrapper p {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.auth-toggle-pill {
+    display: flex;
+    position: relative;
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 32px;
+}
+
+.auth-pill-slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+}
+
+.auth-toggle-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.3s;
+}
+
+.auth-toggle-btn.active {
+    color: var(--brand-dark);
+}
+
+.auth-btn-submit {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-dark) 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 10px;
+}
+
+.auth-btn-submit:active {
+    transform: scale(0.96);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 15px;
+    }
+    
+    .auth-panel {
+        padding: 30px 20px;
+        border-radius: 20px;
+    }
+
+    .auth-header-wrapper {
+        margin-bottom: 20px;
+    }
+
+    .auth-header-wrapper img {
+        width: 54px;
+        height: 54px;
+        margin-bottom: 12px;
+    }
+
+    .auth-header-wrapper h2 {
+        font-size: 1.35rem;
+        margin-bottom: 4px;
+    }
+
+    .auth-header-wrapper p {
+        font-size: 0.85rem;
+    }
+
+    .auth-toggle-pill {
+        margin-bottom: 20px;
+    }
+    
+    .auth-btn-submit {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+}
+</style>
+
+<div class="auth-container">
+    
+    <!-- Animated Flood Waves Background -->
+    <div class="auth-bg-waves">
+        <!-- Back Wave (Tallest, slowest, lightest) -->
+        <svg class="auth-wave-layer layer-3" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,60 C150,120 350,0 600,60 C850,120 1050,0 1200,60 L1200,120 L0,120 Z"></path>
+        </svg>
+        <!-- Mid Wave (Medium speed/height) -->
+        <svg class="auth-wave-layer layer-2" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,60 C250,0 350,120 600,60 C850,0 950,120 1200,60 L1200,120 L0,120 Z"></path>
+        </svg>
+        <!-- Front Wave (Shortest, fastest, solidest) -->
+        <svg class="auth-wave-layer layer-1" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,60 C180,120 380,0 600,60 C820,120 1020,0 1200,60 L1200,120 L0,120 Z"></path>
+        </svg>
+    </div>
+
+    <div class="auth-panel">
+        
+        <div class="auth-header-wrapper">
+            <img src="logo.png" alt="SAFE Logo">
+            <h2>Welcome to SAFE</h2>
+            <p>Sistem Aplikasi Flood Early Warning</p>
+        </div>
+
+        <div class="auth-toggle-pill">
+            <div id="auth-pill" class="auth-pill-slider"></div>
+            <div id="tab-login" class="auth-toggle-btn active" onclick="switchAuthMode('login')">Sign In</div>
+            <div id="tab-register" class="auth-toggle-btn" onclick="switchAuthMode('register')">Sign Up</div>
+        </div>
+
+        <!-- Login Form -->
+        <form id="form-login" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <input type="email" id="login-email" placeholder="Alamat Email" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="login-password" placeholder="Password" required>
+            </div>
+            <button type="submit" class="auth-btn-submit">Sign In</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="form-register" onsubmit="handleRegister(event)" style="display: none;">
+            <div class="form-group">
+                <input type="text" id="register-name" placeholder="Nama Lengkap" required>
+            </div>
+            <div class="form-group">
+                <input type="email" id="register-email" placeholder="Alamat Email" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="register-password" minlength="6" placeholder="Password (Min. 6 Karakter)" required>
+            </div>
+            <button type="submit" class="auth-btn-submit">Sign Up</button>
+        </form>
+        
+    </div>
+</div>

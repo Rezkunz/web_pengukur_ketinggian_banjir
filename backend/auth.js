@@ -88,27 +88,25 @@ async function saveProfile(e) {
 }
 
 
-// Auth Logics
 function switchAuthMode(mode) {
     const fLogin = document.getElementById('form-login');
     const fReg = document.getElementById('form-register');
     const tLogin = document.getElementById('tab-login');
     const tReg = document.getElementById('tab-register');
+    const pill = document.getElementById('auth-pill');
     
     if(mode === 'login') {
-        fLogin.style.display = 'block';
-        fReg.style.display = 'none';
-        tLogin.style.color = '#2c3e50';
-        tLogin.style.borderBottomColor = '#58d68d';
-        tReg.style.color = '#95a5a6';
-        tReg.style.borderBottomColor = 'transparent';
+        if(fLogin) fLogin.style.display = 'block';
+        if(fReg) fReg.style.display = 'none';
+        if(tLogin) tLogin.classList.add('active');
+        if(tReg) tReg.classList.remove('active');
+        if(pill) pill.style.transform = 'translateX(0)';
     } else {
-        fLogin.style.display = 'none';
-        fReg.style.display = 'block';
-        tReg.style.color = '#2c3e50';
-        tReg.style.borderBottomColor = '#3498db';
-        tLogin.style.color = '#95a5a6';
-        tLogin.style.borderBottomColor = 'transparent';
+        if(fLogin) fLogin.style.display = 'none';
+        if(fReg) fReg.style.display = 'block';
+        if(tReg) tReg.classList.add('active');
+        if(tLogin) tLogin.classList.remove('active');
+        if(pill) pill.style.transform = 'translateX(100%)';
     }
 }
 
@@ -122,7 +120,7 @@ function handleLogin(e) {
         if(err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'Email atau password yang Anda masukkan salah.';
         else if(err.code === 'auth/user-not-found') msg = 'Akun dengan email tersebut tidak ditemukan.';
         else if(err.code === 'auth/invalid-email') msg = 'Format email tidak valid.';
-        showCustomModal('SIAGA1', 'Login Gagal', msg);
+        showCustomModal('SIAGA2', 'Login Gagal', msg);
     });
 }
 
@@ -144,7 +142,7 @@ function handleRegister(e) {
         let msg = err.message;
         if(err.code === 'auth/email-already-in-use') msg = 'Email ini sudah terdaftar. Silakan gunakan email lain atau login.';
         else if(err.code === 'auth/weak-password') msg = 'Password terlalu lemah, minimal 6 karakter.';
-        showCustomModal('SIAGA1', 'Register Gagal', msg);
+        showCustomModal('SIAGA2', 'Register Gagal', msg);
     });
 }
 

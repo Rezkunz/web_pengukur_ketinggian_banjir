@@ -24,15 +24,17 @@
 .water-tank {
     width: 90px;
     height: 220px;
-    background: linear-gradient(180deg, #dde8f0 0%, #c8dcea 100%);
+    background: linear-gradient(180deg, rgba(235, 245, 255, 0.5) 0%, rgba(200, 225, 245, 0.8) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border-radius: 45px;
     border: 4px solid rgba(255,255,255,0.9);
     position: relative;
     overflow: hidden;
     box-shadow:
-        inset 0 0 20px rgba(110, 147, 179, 0.15),
-        0 10px 30px rgba(110, 147, 179, 0.2),
-        inset 2px 0 6px rgba(255,255,255,0.5);
+        inset 0 0 20px rgba(14, 165, 233, 0.15),
+        0 8px 30px rgba(0, 0, 0, 0.06),
+        inset 2px 0 6px rgba(255,255,255,0.6);
 }
 
 /* Shimmer / refleksi cahaya di dinding tangki */
@@ -43,7 +45,7 @@
     left: 12px;
     width: 10px;
     height: 55%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 100%);
     border-radius: 10px;
     z-index: 5;
     pointer-events: none;
@@ -173,9 +175,10 @@
     gap: 14px;
     padding: 14px 18px;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(40,40,40,0.96) 0%, rgba(28,28,28,0.96) 100%);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.8);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     margin-bottom: 4px;
     animation: offlinePulseIn 0.4s ease;
 }
@@ -221,13 +224,13 @@
     display: block;
     font-size: 0.9rem;
     font-weight: 700;
-    color: #f0f0f0;
+    color: var(--text-primary);
     margin-bottom: 2px;
 }
 
 .offline-text span {
     font-size: 0.78rem;
-    color: #aaa;
+    color: var(--text-secondary);
 }
 
 .offline-dot {
@@ -324,14 +327,14 @@
     transition: all 0.4s ease;
 }
 
-.alert-section.status-aman   .alert-icon { background: rgba(76,175,80,0.15);  color: var(--status-aman); }
-.alert-section.status-siaga2 .alert-icon { background: rgba(243,156,18,0.15); color: var(--status-siaga2); }
-.alert-section.status-siaga1 .alert-icon { background: rgba(231,76,60,0.15);  color: var(--status-siaga1); }
+.alert-section.status-aman   .alert-icon { background: rgba(16, 185, 129, 0.15); color: var(--status-aman); }
+.alert-section.status-siaga1 .alert-icon { background: rgba(245, 158, 11, 0.15); color: var(--status-siaga1); }
+.alert-section.status-siaga2 .alert-icon { background: rgba(239, 68, 68, 0.15);  color: var(--status-siaga2); }
 .alert-section.status-offline .alert-icon { background: rgba(150,150,150,0.15); color: #888; }
 
 .alert-section.status-aman    { border-left: 5px solid var(--status-aman); }
-.alert-section.status-siaga2  { border-left: 5px solid var(--status-siaga2); }
-.alert-section.status-siaga1  { border-left: 5px solid var(--status-siaga1); animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
+.alert-section.status-siaga1  { border-left: 5px solid var(--status-siaga1); }
+.alert-section.status-siaga2  { border-left: 5px solid var(--status-siaga2); animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
 .alert-section.status-offline { border-left: 5px solid #888; opacity: 0.7; }
 
 @keyframes shake {

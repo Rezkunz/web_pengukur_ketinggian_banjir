@@ -30,16 +30,16 @@ const int echoPin = 12; // D6
 #define SOUND_VELOCITY 0.034
 long duration;
 int d_cm;
-int H = 300;  // Tinggi pemasangan sensor dari dasar (cm). Sesuaikan jika berbeda!
+int H = 400;  // Tinggi pemasangan sensor dari dasar (cm). Ditingkatkan ke 4 Meter.
 int level;    // Tinggi air dalam cm = H - d_cm (sensor menghadap ke BAWAH)
 int s1 = 0, s2 = 0; 
 String status;
 
 // Threshold Ketinggian Air (sensor ke BAWAH: level = H - d_cm)
-// d_cm=250 → level=300-250=50cm → SIAGA 1
-// d_cm=200 → level=300-200=100cm → SIAGA 2 (lebih bahaya)
-#define LEVEL_SIAGA1 50  // level >= 50cm : SIAGA 1 (waspada)
-#define LEVEL_SIAGA2 100 // level >= 100cm: SIAGA 2 (bahaya)
+// d_cm=200 → level=400-200=200cm → SIAGA 1
+// d_cm=100 → level=400-100=300cm → SIAGA 2 (lebih bahaya)
+#define LEVEL_SIAGA1 200 // level >= 200cm: SIAGA 1 (waspada)
+#define LEVEL_SIAGA2 300 // level >= 300cm: SIAGA 2 (bahaya)
 
 void baca_level(); 
 

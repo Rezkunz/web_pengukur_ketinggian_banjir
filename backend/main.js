@@ -98,5 +98,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             viewAuth.classList.add('active');
         }
+
+        // Sembunyikan global loader jika ada
+        const globalLoader = document.getElementById('global-loader');
+        if (globalLoader) {
+            globalLoader.style.opacity = '0';
+            globalLoader.style.visibility = 'hidden';
+            setTimeout(() => {
+                globalLoader.style.display = 'none';
+            }, 500);
+        }
     });
 });

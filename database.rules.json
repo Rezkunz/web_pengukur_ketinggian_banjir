@@ -1,0 +1,39 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "sensor_data": {
+      ".read": "auth !== null",
+      ".write": false,
+      "water_level": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 400" },
+      "ts": { ".validate": "newData.isNumber()" },
+      "chart_history": {
+        ".read": "auth !== null",
+        ".write": "auth !== null",
+        "$entry": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 400" }
+      }
+    },
+    "users": {
+        "$uid": {
+          ".read": "auth !== null && auth.uid === $uid",
+          ".write": "auth !== null && auth.uid === $uid"
+        }
+    },
+    "laporan": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      "$entryId": {
+        ".validate": "newData.hasChildren(['nama', 'lokasi', 'tingkat', 'uid', 'timestamp'])",
+        "uid": { ".validate": "newData.val() === auth.uid" }
+      }
+    },
+    "saran": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      "$entryId": {
+        ".validate": "newData.hasChildren(['email', 'pesan', 'uid', 'timestamp'])",
+        "uid": { ".validate": "newData.val() === auth.uid" }
+      }
+    }
+  }
+}

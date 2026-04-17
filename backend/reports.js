@@ -91,8 +91,8 @@ function listenAdminData() {
             // Determine badge color based on tingkat
             let badgeColor = '#3498db'; // default biru
             let tk = data.tingkat ? data.tingkat.toLowerCase() : '';
-            if(tk.includes('tinggi') || tk.includes('siaga 1') || tk.includes('parah')) badgeColor = '#e74c3c'; // merah
-            else if(tk.includes('sedang') || tk.includes('siaga 2')) badgeColor = '#f39c12'; // kuning
+            if(tk.includes('siaga 2') || tk.includes('bahaya') || tk.includes('parah')) badgeColor = '#ef4444'; // merah
+            else if(tk.includes('siaga 1') || tk.includes('waspada')) badgeColor = '#f59e0b'; // kuning/orange
             
             if(adminLapor) {
                 adminLapor.innerHTML = `
