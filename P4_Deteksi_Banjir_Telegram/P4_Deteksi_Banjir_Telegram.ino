@@ -93,13 +93,12 @@ void loop() {
   // 2. Update data ke Firebase DB Web
   if (millis() - lastFirebaseUpdate >= firebaseInterval) {
     if(d_cm > 0) {
-      // Kirim level (tinggi air) agar web mudah menampilkan persentase tangki
-      if (Firebase.setInt(fbdo, "/sensor_data/water_level", level)) {
-        // Sukses
-      } else {
-        Serial.println("Gagal terhubung Firebase: " + fbdo.errorReason());
-      }
+      Firebase.setInt(fbdo, "/sensor_data/water_level", level);
     }
+    
+    // Heartbeat: Detak jantung agar web tahu alat Online
+    Firebase.setInt(fbdo, "/sensor_data/ts", (int)(millis() / 1000));
+    
     lastFirebaseUpdate = millis();
   }
 }
