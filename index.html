@@ -13,7 +13,7 @@
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: https:;
-        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app;
+        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app wss://*.firebasedatabase.app;
         frame-src 'none';
         object-src 'none';
     ">
@@ -43,6 +43,29 @@
     <meta property="og:image" content="https://www.safetelu.my.id/logo.png">
     <meta property="og:url" content="https://www.safetelu.my.id/">
     <meta property="og:type" content="website">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SAFE - Sistem Aplikasi Flood Early Warning">
+    <meta name="twitter:description" content="Pantau ketinggian air secara realtime dengan sistem peringatan dini banjir SAFE.">
+    <meta name="twitter:image" content="https://www.safetelu.my.id/logo.png">
+
+    <!-- Structured Data (JSON-LD) for Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "SAFE (Sistem Aplikasi Flood Early Warning)",
+      "url": "https://www.safetelu.my.id/",
+      "description": "Sistem peringatan dini dan monitoring banjir realtime menggunakan sensor ultrasonik dan NodeMCU.",
+      "applicationCategory": "Public Safety Application",
+      "operatingSystem": "Web Browser",
+      "author": {
+        "@type": "Organization",
+        "name": "SAFE Team"
+      }
+    }
+    </script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

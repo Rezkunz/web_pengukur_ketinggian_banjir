@@ -96,8 +96,10 @@ void loop() {
       Firebase.setInt(fbdo, "/sensor_data/water_level", level);
     }
     
-    // Heartbeat: Detak jantung agar web tahu alat Online
-    Firebase.setInt(fbdo, "/sensor_data/ts", (int)(millis() / 1000));
+    // Heartbeat: Mengirim Server Timestamp agar web tahu kapan alat terakhir aktif secara persisten
+    FirebaseJson json;
+    json.set(".sv", "timestamp");
+    Firebase.set(fbdo, "/sensor_data/ts", json);
     
     lastFirebaseUpdate = millis();
   }

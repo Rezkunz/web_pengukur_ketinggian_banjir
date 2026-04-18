@@ -13,11 +13,12 @@ let currentWaterLevel = 0;
 let chartIntervalTimer = null;
 
 // Sensor Offline Detection Logic (20s polling)
-const POLL_INTERVAL_MS = 20 * 1000;
-const POLL_GAP_MS      = 2000;
+const POLL_INTERVAL_MS = 3 * 1000; // Cek setiap 3 detik
+const POLL_GAP_MS      = 1000;     // Jeda 1 detik antar sampel
 let offlinePollTimer   = null;
 let isSensorOffline    = false;
 let lastOfflineCheckAt = null;
+let offlineSince       = null; // Mencatat kapan sensor mulai offline
 
 const CHART_HISTORY_PATH = 'sensor_data/chart_history';
 const CHART_MAX_POINTS = 8; 
@@ -271,9 +272,19 @@ function updateUI(waterLevel) {
  * @param {string}  reason     - alasan offline (opsional)
  */
 function updateOfflineUI(offline, sinceText, reason) {
-    const msg = reason || (offline
-        ? `Tidak ada data baru sejak pengecekan terakhir (${sinceText})`
-        : `Sensor aktif — dicek ${sinceText}`);
+    let msg = reason;
+    
+    if (!msg) {
+        if (offline) {
+            // Jika offline, hitung waktu sejak offlineSince
+            const timeStr = offlineSince 
+                ? new Date(offlineSince).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
+                : sinceText;
+            msg = `Sensor mati dari jam ${timeStr} WIB`;
+        } else {
+            msg = `Sensor aktif — dicek ${sinceText}`;
+        }
+    }
 
     // ── Banner user ──
     const bannerUser = document.getElementById('offline-banner-user');
@@ -303,7 +314,15 @@ function updateOfflineUI(offline, sinceText, reason) {
     if (badge) {
         badge.className = `sensor-status-badge ${offline ? 'offline' : 'online'}`;
         if (badgeLabel) badgeLabel.textContent = offline ? 'Offline' : 'Online';
-        if (badgeTime) badgeTime.textContent = `Dicek: ${sinceText}`;
+        // Tampilkan waktu mulai mati jika offline, atau waktu cek terakhir jika online
+        if (badgeTime) {
+            if (offline && offlineSince) {
+                const offTime = new Date(offlineSince).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                badgeTime.textContent = `Mati sejak: ${offTime} WIB`;
+            } else {
+                badgeTime.textContent = `Dicek: ${sinceText}`;
+            }
+        }
     }
 
     if (statStatus) {
@@ -384,8 +403,10 @@ async function pollSensorStatus() {
         }
 
         if (ts1 !== null) {
-            // Mode ts: nilai HARUS berubah dalam 2 detik jika sensor aktif
-            setOfflineState(val1 === val2);
+            // Mode ts: nilai HARUS berubah dalam POLL_GAP_MS jika sensor aktif
+            const isReallyOffline = (val1 === val2);
+            // Jika offline, gunakan nilai 'val2' (timestamp dari server) sebagai waktu mulai mati
+            setOfflineState(isReallyOffline, null, isReallyOffline ? val2 : null);
         } else {
             // Mode water_level: nilai mungkin konstan walau sensor aktif.
             // Jangan tampilkan offline hanya karena level sama.
@@ -401,14 +422,37 @@ async function pollSensorStatus() {
 
 /**
  * Set status offline/online dan update semua UI
+ * @param {boolean} offline
+ * @param {string}  reason
+ * @param {number}  timestamp - Waktu server saat sensor terakhir aktif (ms)
  */
-function setOfflineState(offline, reason) {
-    if (offline === isSensorOffline) return; // tidak berubah, skip
+function setOfflineState(offline, reason, timestamp) {
+    if (offline === isSensorOffline && !timestamp) return; // tidak berubah, skip
     isSensorOffline = offline;
+
+    if (offline) {
+        // Jika offline, gunakan timestamp dari database (jika ada) atau waktu sekarang
+        if (!offlineSince) {
+            offlineSince = timestamp || Date.now();
+        }
+    } else {
+        // Baru saja kembali online
+        offlineSince = null;
+    }
 
     const sinceText = lastOfflineCheckAt
         ? new Date(lastOfflineCheckAt).toLocaleTimeString('id-ID') + ' WIB'
         : '-';
+
+    // Update 'Terakhir diperbarui' di bawah grafik agar sinkron dengan waktu mati
+    if (offline && offlineSince) {
+        const offTime = new Date(offlineSince).toLocaleTimeString('id-ID') + ' WIB';
+        const lastUpdateEl = document.getElementById('last-update');
+        const adminSensorTime = document.getElementById('admin-sensor-time');
+        
+        if (lastUpdateEl) lastUpdateEl.textContent = offTime;
+        if (adminSensorTime) adminSensorTime.textContent = offTime;
+    }
 
     updateOfflineUI(offline, sinceText, reason);
 }
@@ -419,9 +463,8 @@ function setOfflineState(offline, reason) {
 function startOfflineDetector() {
     if (offlinePollTimer) clearInterval(offlinePollTimer);
 
-    // Cek pertama kali 10 detik setelah page load
-    // (beri waktu Firebase listener untuk setup)
-    setTimeout(pollSensorStatus, 10 * 1000);
+    // Cek pertama kali 3 detik setelah page load
+    setTimeout(pollSensorStatus, 3 * 1000);
 
     // Polling rutin setiap 60 detik
     offlinePollTimer = setInterval(pollSensorStatus, POLL_INTERVAL_MS);
@@ -450,12 +493,29 @@ function startDataListener() {
 
         currentWaterLevel = data;
         
-        // Langsung set ONLINE jika data masuk (menghilangkan delay respon)
+        // Langsung set ONLINE jika data masuk
         if (isSensorOffline) setOfflineState(false);
         
         updateUI(data);
 
         // 5. Smart save chart (maks 1x per 15 menit)
         maybeSaveChartPoint(data);
+    });
+
+    // 6. Real-time listener untuk sinkronisasi status offline awal
+    database.ref('sensor_data/ts').on('value', (snap) => {
+        const ts = snap.val();
+        if (!ts) return;
+
+        const now = Date.now();
+        const diff = now - ts;
+
+        // Jika data di DB sudah lebih dari 10 detik yang lalu, 
+        // berarti saat ini sensor sudah offline
+        if (diff > 10 * 1000) {
+            setOfflineState(true, null, ts);
+        } else {
+            if (isSensorOffline) setOfflineState(false);
+        }
     });
 }
