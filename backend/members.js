@@ -1,4 +1,3 @@
-// Member Management Logic
 function startMembersListener() {
     if (!database) return;
 
@@ -6,7 +5,6 @@ function startMembersListener() {
         const listEl = document.getElementById('members-list');
         const cardsEl = document.getElementById('members-cards');
         
-        // Cek jika elemen tidak ada di DOM saat ini, hentikan (mungkin sedang di view lain)
         if (!listEl && !cardsEl) return;
         
         if (listEl) listEl.innerHTML = '';
@@ -25,7 +23,6 @@ function startMembersListener() {
             const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
             const roleText = user.role === 'admin' ? 'Admin' : 'User';
 
-            // 1. Desktop Table Row
             if (listEl) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -40,7 +37,6 @@ function startMembersListener() {
                 listEl.appendChild(tr);
             }
 
-            // 2. Mobile card
             if (cardsEl) {
                 const card = document.createElement('div');
                 card.className = 'member-card';

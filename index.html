@@ -80,9 +80,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/base.css?v=50">
-    <link rel="stylesheet" href="css/components.css?v=50">
-    <link rel="stylesheet" href="css/monitoring.css?v=50">
+    <link rel="stylesheet" href="css/base.css?v=51">
+    <link rel="stylesheet" href="css/components.css?v=51">
+    <link rel="stylesheet" href="css/monitoring.css?v=51">
 </head>
 
 <body>
@@ -323,14 +323,10 @@
             </div>
             <h2 id="confirm-modal-title">Hapus Anggota?</h2>
             <p id="confirm-modal-desc">Apakah Anda yakin ingin menghapus pengguna ini?</p>
-                    <div class="card-side-actions">
-                        <button class="btn-edit-premium" onclick="openMemberModal('${uid}')" aria-label="Edit Anggota">
-                            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                        </button>
-                        <button class="btn-delete-premium" onclick="deleteUser('${uid}')" aria-label="Hapus Anggota">
-                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
-                    </div>
+            <div class="confirm-modal-actions">
+                <button class="btn-confirm-cancel" onclick="closeConfirmModal()">Batal</button>
+                <button class="btn-confirm-delete" id="btn-confirm-delete-action">Hapus</button>
+            </div>
         </div>
     </div>
 
@@ -340,13 +336,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
     <!-- Custom JS -->
-    <script src="backend/firebase-config.js?v=50"></script>
-    <script src="backend/ui.js?v=50"></script>
-    <script src="backend/auth.js?v=50"></script>
-    <script src="backend/monitoring.js?v=50"></script>
-    <script src="backend/reports.js?v=50"></script>
-    <script src="backend/members.js?v=50"></script>
-    <script src="backend/main.js?v=50"></script>
+    <script src="backend/firebase-config.js?v=51"></script>
+    <script src="backend/ui.js?v=51"></script>
+    <script src="backend/auth.js?v=51"></script>
+    <script src="backend/monitoring.js?v=51"></script>
+    <script src="backend/reports.js?v=51"></script>
+    <script src="backend/members.js?v=51"></script>
+    <script src="backend/main.js?v=51"></script>
 </body>
 
 </html>
