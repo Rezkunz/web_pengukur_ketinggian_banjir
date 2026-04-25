@@ -61,14 +61,88 @@ body {
     box-shadow: none;
 }
 
+/* Biarkan Admin Dashboard menggunakan lebar layar penuh di mobile agar tidak sesak */
+body.admin-view .app-container {
+    max-width: 100% !important;
+}
+
 /* Mobile: atur urutan visual — header atas, konten tengah, nav bawah */
 header        { order: 0; }
 .bottom-nav   { order: 2; }   /* nav ke bawah meskipun di DOM sebelum main */
 .content-area { order: 1; }   /* konten di tengah */
 
-/* Mobile: sembunyikan elemen sidebar yang hanya untuk desktop */
+/* Mobile: sembunyikan elemen sidebar yang hanya untuk desktop secara default */
 .sidebar-brand,
 .sidebar-profile { display: none; }
+
+/* Admin Dashboard Mobile Layout Reverted to Bottom Nav (as per user reference) */
+@media (max-width: 767px) {
+    body.admin-view .app-container {
+        display: flex !important;
+        flex-direction: column !important;
+        max-width: 480px !important;
+        margin: 0 auto;
+        overflow-x: hidden;
+    }
+
+    body.admin-view header {
+        position: relative !important;
+        left: 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        z-index: 10 !important;
+        height: auto !important;
+        background: var(--bg-panel) !important;
+    }
+
+    body.admin-view .bottom-nav {
+        position: absolute !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        flex-direction: row !important;
+        display: flex !important;
+        background: var(--bg-panel) !important;
+        backdrop-filter: blur(20px);
+        border-top: 1px solid var(--glass-border);
+        border-right: none !important;
+        padding: 12px 0 !important;
+        border-radius: 20px 20px 0 0 !important;
+        z-index: 100 !important;
+    }
+
+    body.admin-view .bottom-nav .nav-item {
+        flex: 1 !important;
+        flex-direction: column !important;
+        padding: 0 !important;
+        gap: 4px !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    body.admin-view .bottom-nav .nav-item span:first-of-type {
+        display: block !important;
+        font-size: 1.2rem !important;
+        line-height: 1 !important;
+    }
+
+    body.admin-view .bottom-nav .nav-item span:last-of-type {
+        display: block !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+    }
+
+    body.admin-view .content-area {
+        margin-left: 0 !important;
+        padding: 24px 20px 90px !important;
+        width: 100% !important;
+        height: auto !important;
+        flex: 1 !important;
+        display: block !important;
+    }
+}
 
 
 /* =====================================================
@@ -116,7 +190,10 @@ header        { order: 0; }
         overflow-y: auto;
         overflow-x: hidden;
         z-index: 10;
-        /* Tidak ubah display — dikontrol JS */
+    }
+
+    body.admin-view .bottom-nav .nav-item span {
+        display: block !important; /* Show text on desktop/tablet */
     }
 
     /* ── SIDEBAR BRAND (logo + nama app) ── */

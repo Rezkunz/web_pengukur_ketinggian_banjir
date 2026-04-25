@@ -9,8 +9,10 @@ let lastNotifState = 'AMAN';
 
 // Chart & Global State
 let waterChart;
+let historyChart;
 let currentWaterLevel = 0;
 let chartIntervalTimer = null;
+let currentHistoryRef = null;
 
 // Sensor Offline Detection Logic (20s polling)
 const POLL_INTERVAL_MS = 3 * 1000; // Cek setiap 3 detik
@@ -24,23 +26,38 @@ const CHART_HISTORY_PATH = 'sensor_data/chart_history';
 const CHART_MAX_POINTS = 8; 
 const CHART_INTERVAL_MS = 15 * 60 * 1000; // 15 Minutes
 
-// Format timestamp ke jam:menit (WIB)
+// Format timestamp ke Tanggal Jam:Menit (WIB)
 function formatTimestamp(ts) {
     const d = new Date(parseInt(ts));
+    const now = new Date();
+    
     const h = String(d.getHours()).padStart(2, '0');
     const m = String(d.getMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
+    const timeStr = `${h}:${m}`;
+
+    // Jika bukan hari ini, tambahkan tanggal agar tidak bingung
+    if (d.toDateString() !== now.toDateString()) {
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        return `${day}/${month} ${timeStr}`;
+    }
+    
+    return timeStr;
 }
 
 // Initialize Chart (User/Admin)
 function initChart(isAdmin = false) {
+    initRealtimeChart(isAdmin);
+    initHistoryChart(isAdmin);
+}
+
+function initRealtimeChart(isAdmin) {
     const canvasId = isAdmin ? 'adminWaterChart' : 'waterChart';
     const canvasEl = document.getElementById(canvasId);
     if (!canvasEl) return;
 
     if (waterChart) waterChart.destroy();
 
-    // Label placeholder (akan diupdate oleh listener Firebase)
     const placeholderLabels = Array.from({ length: CHART_MAX_POINTS }, (_, i) => {
         const minutesAgo = (CHART_MAX_POINTS - 1 - i) * 15;
         return minutesAgo === 0 ? 'Skrg' : `-${minutesAgo}m`;
@@ -71,29 +88,162 @@ function initChart(isAdmin = false) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => `${ctx.parsed.y} cm`
-                    }
-                }
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} cm` } }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 400, // 4 meter max
+                    max: 400,
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: {
-                        color: '#475569',
-                        callback: v => v + 'cm',
-                        font: { size: 11 },
-                        stepSize: 100
-                    }
+                    ticks: { color: '#475569', callback: v => v + 'cm', font: { size: 11 }, stepSize: 100 }
                 },
                 x: {
                     grid: { display: false },
                     ticks: { color: '#475569', font: { size: 11 } }
                 }
             }
+        }
+    });
+}
+
+function initHistoryChart(isAdmin = false) {
+    const canvasId = isAdmin ? 'adminHistoryChart' : 'historyChart';
+    const canvasEl = document.getElementById(canvasId);
+    if (!canvasEl) return;
+
+    if (historyChart) {
+        historyChart.destroy();
+        historyChart = null;
+    }
+
+    const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+    const ctx = canvasEl.getContext('2d');
+    
+    // Custom Plugin to draw horizontal threshold lines
+    const thresholdLines = {
+        id: 'thresholdLines',
+        beforeDraw(chart) {
+            const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(left, y.getPixelForValue(THRESHOLDS.SIAGA1));
+            ctx.lineTo(right, y.getPixelForValue(THRESHOLDS.SIAGA1));
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(left, y.getPixelForValue(THRESHOLDS.SIAGA2));
+            ctx.lineTo(right, y.getPixelForValue(THRESHOLDS.SIAGA2));
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+
+    historyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Tinggi Air (cm)',
+                data: new Array(24).fill(0),
+                backgroundColor: [],
+                borderRadius: 5,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} cm` } }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 400,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { color: '#475569', callback: v => v + 'cm', font: { size: 11 }, stepSize: 100 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#475569', font: { size: 10 }, autoSkip: false }
+                }
+            }
+        },
+        plugins: [thresholdLines]
+    });
+
+    const datePickerId = isAdmin ? 'admin-history-date' : 'history-date-picker';
+    const datePicker = document.getElementById(datePickerId);
+    if (datePicker) {
+        if (!datePicker.value) {
+            const today = new Date().toISOString().split('T')[0];
+            datePicker.value = today;
+            datePicker.max = today;
+        }
+        datePicker.onchange = (e) => fetchHistoryData(e.target.value);
+        fetchHistoryData(datePicker.value);
+    }
+}
+
+function handleDatePickerChange(e) {
+    fetchHistoryData(e.target.value);
+}
+
+async function fetchHistoryData(dateStr) {
+    if (!database) return;
+    
+    // Detach old listener if exists
+    if (currentHistoryRef) {
+        currentHistoryRef.off();
+        currentHistoryRef = null;
+    }
+    
+    currentHistoryRef = database.ref(`history/${dateStr}`);
+    currentHistoryRef.on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const hourlyValues = Array.from({ length: 24 }, (_, i) => data[i] || 0);
+        
+        // Dynamic colors based on value
+        const colors = hourlyValues.map(v => {
+            if (v >= THRESHOLDS.SIAGA2) return 'rgba(239, 68, 68, 0.8)'; // Merah
+            if (v >= THRESHOLDS.SIAGA1) return 'rgba(245, 158, 11, 0.8)'; // Kuning
+            return 'rgba(14, 165, 233, 0.6)'; // Biru (Normal)
+        });
+        
+        if (historyChart) {
+            historyChart.data.datasets[0].data = hourlyValues;
+            historyChart.data.datasets[0].backgroundColor = colors;
+            historyChart.update();
+        }
+    }, (err) => {
+        console.warn('Gagal mendengarkan data history:', err);
+    });
+}
+
+function saveHourlyData(value) {
+    if (!database || value === null || value === undefined) return;
+
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const hour = now.getHours();
+
+    // Check if this hour is already saved to avoid redundant writes
+    const path = `history/${dateStr}/${hour}`;
+    database.ref(path).once('value', (snap) => {
+        if (!snap.exists()) {
+            database.ref(path).set(Math.round(value));
+            
+            // Clean up old history (> 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 31);
+            const oldDateStr = thirtyDaysAgo.toISOString().split('T')[0];
+            database.ref(`history/${oldDateStr}`).remove();
         }
     });
 }
@@ -106,13 +256,20 @@ function startChartHistoryListener() {
         .orderByKey()
         .limitToLast(CHART_MAX_POINTS)
         .on('value', (snapshot) => {
-            const entries = [];   // nilai ketinggian air
-            const labels = [];   // label waktu dari timestamp key
-
+            const rawData = [];
+            
             snapshot.forEach(child => {
-                labels.push(formatTimestamp(child.key));
-                entries.push(child.val());
+                rawData.push({
+                    key: parseInt(child.key),
+                    value: child.val()
+                });
             });
+
+            // Pastikan terurut secara numerik (kronologis)
+            rawData.sort((a, b) => a.key - b.key);
+
+            const entries = rawData.map(d => d.value);
+            const labels = rawData.map(d => formatTimestamp(d.key));
 
             // Padded dengan null di depan jika data kurang dari CHART_MAX_POINTS
             while (entries.length < CHART_MAX_POINTS) {
@@ -123,7 +280,7 @@ function startChartHistoryListener() {
             if (waterChart) {
                 waterChart.data.labels = labels;
                 waterChart.data.datasets[0].data = entries;
-                waterChart.update('none'); // update tanpa animasi agar lebih cepat
+                waterChart.update('none');
             }
         });
 }
@@ -276,11 +433,13 @@ function updateOfflineUI(offline, sinceText, reason) {
     
     if (!msg) {
         if (offline) {
-            // Jika offline, hitung waktu sejak offlineSince
+            const dateStr = offlineSince 
+                ? new Date(offlineSince).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })
+                : '';
             const timeStr = offlineSince 
                 ? new Date(offlineSince).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
                 : sinceText;
-            msg = `Sensor mati dari jam ${timeStr} WIB`;
+            msg = `Sensor mati dari tanggal ${dateStr} jam ${timeStr} WIB`;
         } else {
             msg = `Sensor aktif — dicek ${sinceText}`;
         }
@@ -447,11 +606,12 @@ function setOfflineState(offline, reason, timestamp) {
     // Update 'Terakhir diperbarui' di bawah grafik agar sinkron dengan waktu mati
     if (offline && offlineSince) {
         const offTime = new Date(offlineSince).toLocaleTimeString('id-ID') + ' WIB';
+        const offDate = new Date(offlineSince).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         const lastUpdateEl = document.getElementById('last-update');
         const adminSensorTime = document.getElementById('admin-sensor-time');
         
-        if (lastUpdateEl) lastUpdateEl.textContent = offTime;
-        if (adminSensorTime) adminSensorTime.textContent = offTime;
+        if (lastUpdateEl) lastUpdateEl.textContent = `${offDate}, ${offTime}`;
+        if (adminSensorTime) adminSensorTime.textContent = `${offDate}, ${offTime}`;
     }
 
     updateOfflineUI(offline, sinceText, reason);
@@ -500,6 +660,9 @@ function startDataListener() {
 
         // 5. Smart save chart (maks 1x per 15 menit)
         maybeSaveChartPoint(data);
+        
+        // 6. Hourly data save (Mencatat setiap jam)
+        saveHourlyData(data);
     });
 
     // 6. Real-time listener untuk sinkronisasi status offline awal

@@ -68,9 +68,20 @@
 
                 <!-- Debit Chart -->
                 <section class="chart-section glass-panel">
-                    <h3>Grafik Ketinggian Air (Per 15 Menit)</h3>
+                    <h3>Grafik Ketinggian Air (Real-Time)</h3>
                     <div class="chart-container">
                         <canvas id="waterChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- History Chart -->
+                <section class="chart-section glass-panel">
+                    <div class="chart-header-row">
+                        <h3>Riwayat Tinggi Air (Per Jam)</h3>
+                        <input type="date" id="history-date-picker" class="history-date-input">
+                    </div>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="historyChart"></canvas>
                     </div>
                 </section>
 

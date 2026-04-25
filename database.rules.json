@@ -14,10 +14,20 @@
       }
     },
     "users": {
+        ".read": "auth !== null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
         "$uid": {
-          ".read": "auth !== null && auth.uid === $uid",
-          ".write": "auth !== null && auth.uid === $uid"
+          ".read": "auth !== null && (auth.uid === $uid || root.child('users/' + auth.uid + '/role').val() === 'admin')",
+          ".write": "auth !== null && (auth.uid === $uid || root.child('users/' + auth.uid + '/role').val() === 'admin')"
         }
+    },
+    "history": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      "$date": {
+        "$hour": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        }
+      }
     },
     "laporan": {
       ".read": "auth !== null",

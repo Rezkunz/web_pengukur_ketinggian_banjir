@@ -376,6 +376,35 @@
     margin-top: 10px;
 }
 
+.chart-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.chart-header-row h3 {
+    margin-bottom: 0 !important;
+}
+
+.history-date-input {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.8);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.history-date-input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
 /* =====================================================
    RESPONSIVE - TABLET (768px+)
    ===================================================== */

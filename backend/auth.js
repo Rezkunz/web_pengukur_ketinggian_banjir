@@ -35,12 +35,19 @@ async function openEditProfile() {
     }
 }
 
-function closeEditProfile() {
+async function checkUserRole(user) {
+    if(!user) return false;
+    const snap = await database.ref('users/' + user.uid + '/role').once('value');
+    return snap.val() === 'admin';
+}
+
+async function closeEditProfile() {
     const viewEdit = document.getElementById('view-edit-profile');
     viewEdit.classList.remove('active');
-    // Return to default view
-    const user = auth.currentUser;
-    if(user && user.email === 'rezads@gmail.com') { // simplified admin check
+    
+    // Return to appropriate dashboard based on role
+    const isAdmin = await checkUserRole(auth.currentUser);
+    if(isAdmin) {
         document.getElementById('view-admin-dashboard').classList.add('active');
     } else {
         document.getElementById('view-monitoring').classList.add('active');

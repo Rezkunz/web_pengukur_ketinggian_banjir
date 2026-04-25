@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const viewAdminDash = document.getElementById('view-admin-dashboard');
         const viewAdminLapor = document.getElementById('view-admin-laporan');
         const viewAdminSaran = document.getElementById('view-admin-saran');
+        const viewAdminMembers = document.getElementById('view-admin-members');
 
         const userNav = document.getElementById('user-navbar');
         const adminNav = document.getElementById('admin-navbar');
@@ -48,45 +49,49 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (sidebarName)   sidebarName.textContent   = userData.nama;
             });
 
-            // Admin Setup (One off)
-            if (user.email === 'rezads@gmail.com' && userData.role !== 'admin') {
+            // Admin Setup (One off fallback)
+            if ((user.email === 'rezads@gmail.com' || user.email === 'admin@safe.net') && userData.role !== 'admin') {
                  if(database) {
                      await database.ref('users/' + user.uid).set({
-                         nama: 'Admin Reza',
-                         email: 'rezads@gmail.com',
+                         nama: user.email === 'admin@safe.net' ? 'Administrator' : 'Admin Reza',
+                         email: user.email,
                          role: 'admin'
                      });
                      userData.role = 'admin';
                  }
             }
-
             if (userData.role === 'admin') {
                 if (!viewAdminDash.innerHTML) {
-                    viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=16').then(r => r.text());
-                    viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=16').then(r => r.text());
-                    viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=16').then(r => r.text());
+                    viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=48').then(r => r.text());
+                    viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=48').then(r => r.text());
+                    viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=48').then(r => r.text());
+                    viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=48').then(r => r.text());
                 }
                 adminNav.style.display = 'flex';
                 userNav.style.display = 'none';
+                document.body.classList.add('admin-view'); // Enable sidebar on mobile for admin
                 viewAdminDash.classList.add('active');
                 
                 bindDOM();
+                // initStats(); // Removed: handled by listenAdminData
                 initChart(true);
                 listenAdminData();
-                startDataListener(); // Will attach UI update functions properly to admin elements if mapped
+                startMembersListener();
+                startDataListener(); 
             } else {
                 if (!viewMonitoring.innerHTML) {
-                    viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=16').then(r => r.text());
-                    viewDarurat.innerHTML = await fetch('views/darurat.html?v=16').then(r => r.text());
-                    viewLapor.innerHTML = await fetch('views/lapor.html?v=16').then(r => r.text());
-                    viewSaran.innerHTML = await fetch('views/saran.html?v=16').then(r => r.text());
+                    viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=48').then(r => r.text());
+                    viewDarurat.innerHTML = await fetch('views/darurat.html?v=48').then(r => r.text());
+                    viewLapor.innerHTML = await fetch('views/lapor.html?v=48').then(r => r.text());
+                    viewSaran.innerHTML = await fetch('views/saran.html?v=48').then(r => r.text());
                 }
                 userNav.style.display = 'flex';
                 adminNav.style.display = 'none';
+                document.body.classList.remove('admin-view');
                 viewMonitoring.classList.add('active');
 
                 bindDOM();
-                initChart();
+                initChart(false);
                 startDataListener();
             }
         } else {
@@ -94,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             userNav.style.display = 'none';
             adminNav.style.display = 'none';
             if (!viewAuth.innerHTML) {
-                viewAuth.innerHTML = await fetch('views/auth.html?v=15').then(r => r.text());
+                viewAuth.innerHTML = await fetch('views/auth.html?v=48').then(r => r.text());
             }
             viewAuth.classList.add('active');
         }

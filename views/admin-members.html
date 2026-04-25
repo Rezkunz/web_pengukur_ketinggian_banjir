@@ -1,0 +1,207 @@
+<div class="admin-members-container">
+    <h2 class="section-title">Manajemen Anggota</h2>
+
+    <!-- Mobile View: Card List -->
+    <div class="members-card-list" id="members-cards">
+        <!-- Cards will be loaded here -->
+    </div>
+
+    <!-- Desktop View: Table -->
+    <div class="glass-panel members-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="members-list">
+                <!-- Data will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Member Modal -->
+<div id="member-modal" class="custom-modal-overlay">
+    <div class="custom-modal-box member-modal-width">
+        <button class="custom-modal-close member-modal-close" onclick="closeMemberModal()">✕</button>
+        <div class="custom-modal-body">
+            <h2 id="member-modal-title">Edit Pengguna</h2>
+            <div class="modal-divider"></div>
+            <form id="member-form" onsubmit="saveMember(event)">
+                <input type="hidden" id="member-uid">
+                <div class="form-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" id="member-nama" placeholder="Nama Lengkap" required>
+                </div>
+                <div class="form-group">
+                    <label>Alamat Email</label>
+                    <input type="email" id="member-email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="member-role">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="auth-btn-submit">Simpan Perubahan</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.section-header-row {
+    display: none;
+}
+
+/* Button Styles */
+.btn-edit {
+    padding: 8px 16px;
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 6px;
+}
+.btn-edit:hover { background: #e0f2fe; transform: translateY(-1px); }
+
+.btn-delete {
+    padding: 8px 16px;
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-delete:hover { background: #fee2e2; transform: translateY(-1px); }
+
+.auth-btn-submit {
+    width: 100%;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 15px;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+}
+.auth-btn-submit:hover { 
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(14, 165, 233, 0.35);
+}
+
+/* Table Style */
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th, .admin-table td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.admin-table th { background: rgba(0,0,0,0.02); font-weight: 700; color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; }
+
+/* Card Style for Mobile */
+.members-card-list { display: none; flex-direction: column; gap: 12px; }
+.member-card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 20px;
+    padding: 18px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+.card-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.card-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-name { font-weight: 700; color: var(--text-primary); font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-email { font-size: 0.82rem; color: #64748b; }
+
+.card-side-actions { display: flex; flex-direction: row; gap: 8px; align-items: center; }
+
+.btn-edit-premium, .btn-delete-premium {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.btn-edit-premium { background: #eff6ff; }
+.btn-edit-premium svg { width: 18px; height: 18px; fill: #3b82f6; }
+
+.btn-delete-premium { background: #fff1f2; }
+.btn-delete-premium svg { width: 18px; height: 18px; fill: #ef4444; }
+
+.btn-edit-premium:hover { background: #dbeafe; transform: translateY(-2px); }
+.btn-delete-premium:hover { background: #ffe4e6; transform: translateY(-2px); }
+.btn-edit-premium:active, .btn-delete-premium:active { transform: scale(0.9); }
+
+.role-badge { padding: 3px 8px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; }
+.role-admin { background: #fee2e2; color: #ef4444; }
+.role-user { background: #e0f2fe; color: #0ea5e9; }
+
+/* Modal Improvements */
+.member-modal-width { max-width: 420px; width: 90%; }
+.member-modal-close { 
+    background: #f0f9ff !important; 
+    color: #0369a1 !important; 
+    border: 1px solid #bae6fd !important; 
+    top: 20px !important; 
+    right: 20px !important; 
+}
+.modal-divider { height: 1px; background: #e0f2fe; margin: 15px 0 25px 0; }
+.custom-modal-body h2 { font-size: 1.4rem; font-weight: 700; color: #0f172a; margin-top: 5px; }
+
+#member-form { text-align: left; }
+#member-form .form-group { margin-bottom: 20px; }
+#member-form label { display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+#member-form input, #member-form select { 
+    width: 100%; 
+    padding: 12px 14px; 
+    border-radius: 12px; 
+    border: 1.5px solid #e2e8f0; 
+    font-family: inherit; 
+    background: #f8fafc; 
+    color: #1e293b; 
+    transition: all 0.2s; 
+}
+#member-form input:focus, #member-form select:focus { 
+    outline: none; 
+    border-color: #0ea5e9; 
+    background: #fff; 
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1); 
+}
+
+/* Responsive Logic */
+@media (max-width: 768px) {
+    .members-table-wrapper { display: none; }
+    .members-card-list { display: flex; }
+    .btn-edit, .btn-delete { padding: 10px; }
+}
+</style>

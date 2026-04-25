@@ -14,16 +14,21 @@
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: https:;
         connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app wss://*.firebasedatabase.app;
-        frame-src 'none';
+        frame-src https://*.firebaseapp.com https://*.firebasedatabase.app;
         object-src 'none';
     ">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta name="referrer" content="strict-origin-when-cross-origin">
 
-    <!-- App Icons (Google Search Favicon) -->
-    <link rel="icon" type="image/png" sizes="192x192" href="logo.png">
-    <link rel="shortcut icon" href="logo.png">
-    <link rel="apple-touch-icon" href="logo.png">
+    <!-- App Icons (Google Search SEO Favicon) -->
+    <link rel="icon" href="/logo.png"> <!-- Landas utama Google Search -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/logo.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/logo.png">
+    <link rel="icon" type="image/png" sizes="144x144" href="/logo.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo.png">
+    <link rel="shortcut icon" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -75,9 +80,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/base.css?v=14">
-    <link rel="stylesheet" href="css/components.css?v=14">
-    <link rel="stylesheet" href="css/monitoring.css?v=14">
+    <link rel="stylesheet" href="css/base.css?v=48">
+    <link rel="stylesheet" href="css/components.css?v=48">
+    <link rel="stylesheet" href="css/monitoring.css?v=48">
 </head>
 
 <body>
@@ -109,7 +114,7 @@
         <header>
             <div class="header-logo" style="display: flex; align-items: center; gap: 12px;">
                 <div class="logo-wrapper">
-                    <img src="logo.png" alt="Logo SAFE" width="36" height="36" style="border-radius: 50%;">
+                    <img src="/logo.png" alt="Logo SAFE" width="36" height="36" style="border-radius: 50%;">
                 </div>
                 <h1 style="margin: 0; font-size: 1.25rem;">SAFE</h1>
             </div>
@@ -134,7 +139,7 @@
 
             <!-- Brand: hanya tampil di sidebar desktop (hidden di mobile via CSS) -->
             <div class="sidebar-brand">
-                <img src="logo.png" alt="Logo" class="sidebar-logo">
+                <img src="/logo.png" alt="Logo" class="sidebar-logo">
                 <span class="sidebar-title">SAFE</span>
             </div>
 
@@ -189,7 +194,7 @@
 
             <!-- Brand: hanya tampil di sidebar desktop -->
             <div class="sidebar-brand">
-                <img src="logo.png" alt="Logo" class="sidebar-logo">
+                <img src="/logo.png" alt="Logo" class="sidebar-logo">
                 <span class="sidebar-title">SAFE</span>
             </div>
 
@@ -205,6 +210,10 @@
             <div class="nav-item" data-target="view-admin-saran" role="button" tabindex="0" aria-label="Navigasi Admin Saran">
                 <span>📬</span>
                 <span>Feedback</span>
+            </div>
+            <div class="nav-item" data-target="view-admin-members" role="button" tabindex="0" aria-label="Navigasi Admin Anggota">
+                <span>👥</span>
+                <span>Anggota</span>
             </div>
 
             <!-- Profile Section: hanya tampil di sidebar desktop -->
@@ -252,6 +261,9 @@
             <!-- VIEW ADMIN: SARAN -->
             <div id="view-admin-saran" class="view-section"></div>
 
+            <!-- VIEW ADMIN: MEMBERS -->
+            <div id="view-admin-members" class="view-section"></div>
+
             <!-- VIEW SHARED: EDIT PROFILE -->
             <div id="view-edit-profile" class="view-section"></div>
 
@@ -292,8 +304,33 @@
                     </svg>
                 </div>
             </div>
-            <h2 id="success-modal-title">Success</h2>
-            <p id="success-modal-desc">Your action was successful.</p>
+            <h2 id="success-modal-title">Berhasil</h2>
+            <p id="success-modal-desc">Data berhasil disimpan.</p>
+        </div>
+    </div>
+
+    <!-- Confirm (Delete) Modal -->
+    <div class="custom-modal-overlay" id="confirm-modal">
+        <div class="confirm-modal-box">
+            <button class="custom-modal-close" style="background: #f0f0f0; color: #999;" onclick="closeConfirmModal()">✕</button>
+            <div class="confirm-icon-wrapper">
+                <div class="confirm-icon-glow"></div>
+                <div class="confirm-icon-circle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </div>
+            </div>
+            <h2 id="confirm-modal-title">Hapus Anggota?</h2>
+            <p id="confirm-modal-desc">Apakah Anda yakin ingin menghapus pengguna ini?</p>
+                    <div class="card-side-actions">
+                        <button class="btn-edit-premium" onclick="openMemberModal('${uid}')" aria-label="Edit Anggota">
+                            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </button>
+                        <button class="btn-delete-premium" onclick="deleteUser('${uid}')" aria-label="Hapus Anggota">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
         </div>
     </div>
 
@@ -303,12 +340,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
     <!-- Custom JS -->
-    <script src="backend/firebase-config.js?v=20"></script>
-    <script src="backend/ui.js?v=20"></script>
-    <script src="backend/auth.js?v=20"></script>
-    <script src="backend/monitoring.js?v=20"></script>
-    <script src="backend/reports.js?v=20"></script>
-    <script src="backend/main.js?v=20"></script>
+    <script src="backend/firebase-config.js?v=48"></script>
+    <script src="backend/ui.js?v=48"></script>
+    <script src="backend/auth.js?v=48"></script>
+    <script src="backend/monitoring.js?v=48"></script>
+    <script src="backend/reports.js?v=48"></script>
+    <script src="backend/members.js?v=47"></script>
+    <script src="backend/main.js?v=48"></script>
 </body>
 
 </html>

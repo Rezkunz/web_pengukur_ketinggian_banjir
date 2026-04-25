@@ -1,87 +1,133 @@
-                <h2 class="section-title">Admin Dashboard</h2>
+<h2 class="section-title">Admin Dashboard</h2>
 
-                <!-- Status Summary Stat Cards -->
-                <div class="stat-grid">
-                    <!-- Total Pengguna -->
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <span class="stat-label">Total Pengguna</span>
-                            <span class="stat-value" id="stat-total-pengguna">0</span>
-                        </div>
-                        <div class="stat-icon-wrap icon-blue">
-                            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                        </div>
-                    </div>
+<!-- Status Summary Stat Cards -->
+<div class="stat-grid">
+    <!-- Total Pengguna -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Total Pengguna</span>
+            <span class="stat-value" id="stat-total-pengguna">0</span>
+        </div>
+        <div class="stat-icon-wrap icon-blue">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+    </div>
 
-                    <!-- Laporan Banjir -->
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <span class="stat-label">Laporan Masuk</span>
-                            <span class="stat-value" id="stat-total-laporan">0</span>
-                        </div>
-                        <div class="stat-icon-wrap icon-red">
-                            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                        </div>
-                    </div>
+    <!-- Laporan Banjir -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Laporan Masuk</span>
+            <span class="stat-value" id="stat-total-laporan">0</span>
+        </div>
+        <div class="stat-icon-wrap icon-red">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        </div>
+    </div>
 
-                    <!-- Feedback Masuk -->
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <span class="stat-label">Feedback</span>
-                            <span class="stat-value" id="stat-total-saran">0</span>
-                        </div>
-                        <div class="stat-icon-wrap icon-purple">
-                            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-5H6V7h12v2z"/></svg>
-                        </div>
-                    </div>
+    <!-- Feedback Masuk -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Feedback</span>
+            <span class="stat-value" id="stat-total-saran">0</span>
+        </div>
+        <div class="stat-icon-wrap icon-purple">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-5H6V7h12v2z"/></svg>
+        </div>
+    </div>
 
-                    <!-- Status Sensor -->
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <span class="stat-label">Status Sensor</span>
-                            <span class="stat-value" id="stat-sensor-status" style="font-size: 1.1rem; color: var(--status-aman);">Online</span>
-                        </div>
-                        <div class="stat-icon-wrap icon-green" id="stat-sensor-icon">
-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                        </div>
-                    </div>
-                </div>
+    <!-- Status Sensor -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Status Sensor</span>
+            <span class="stat-value" id="stat-sensor-status" style="font-size: 1.1rem; color: var(--status-aman);">Online</span>
+        </div>
+        <div class="stat-icon-wrap icon-green" id="stat-sensor-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        </div>
+    </div>
+</div>
 
-                <!-- Status Air Highlight -->
-                <div class="glass-panel" style="padding: 15px 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.5rem;">🌊</span>
-                        <div>
-                            <h4 style="color: #aaa; margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Kondisi Air</h4>
-                            <h2 style="color: #58d68d; margin: 0; font-size: 1.25rem;" id="admin-status-air">Aman</h2>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <p style="font-size: 0.72rem; color: #999; margin: 0;">Update Terakhir:</p>
-                        <p style="font-size: 0.85rem; font-weight: 700; color: #555; margin: 0;" id="admin-sensor-time">-</p>
-                    </div>
-                </div>
+<!-- Status Air Highlight -->
+<div class="glass-panel highlight-panel">
+    <div class="condition-info">
+        <span class="emoji-large">🌊</span>
+        <div>
+            <h4 class="label-tiny">Kondisi Air</h4>
+            <h2 class="status-text text-green" id="admin-status-air">Aman</h2>
+        </div>
+    </div>
+    <div class="time-info">
+        <p class="label-nano">Update Terakhir:</p>
+        <p class="value-mini" id="admin-sensor-time">-</p>
+    </div>
+</div>
 
-                <!-- ══ SENSOR OFFLINE BANNER (Admin) ══ -->
-                <div class="offline-banner" id="offline-banner-admin">
-                    <div class="offline-icon-wrap">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20.5 2l-1.5 1.5L17.5 2 16 3.5 17.5 5 16 6.5 17.5 8l1.5-1.5L20.5 8 22 6.5 20.5 5 22 3.5zM12 3C7.95 3 4.21 4.34 1.2 6.6L3 8.4C5.57 6.5 8.66 5.4 12 5.4c.78 0 1.55.07 2.29.21l2.1-2.1C15.03 3.19 13.54 3 12 3zm-9.8 1.2L.7 5.7 2.5 7.5C1.59 8.1.73 8.77 0 9.53L1.77 11.3C2.68 10.36 3.73 9.56 4.88 8.92L3.2 7.24C2.85 7.04 2.51 6.83 2.2 6.6zM12 8a11.93 11.93 0 00-7.03 2.27l1.77 1.77C8.12 10.76 10 10 12 10c1.42 0 2.74.39 3.88 1.04l2.05-2.05A9.93 9.93 0 0012 8zm0 4c-1.07 0-2.05.34-2.84.9l1.78 1.78c.34-.1.7-.18 1.06-.18.98 0 1.85.4 2.5 1.04l1.77-1.77C15.27 12.68 13.72 12 12 12zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
-                        </svg>
-                    </div>
-                    <div class="offline-text">
-                        <strong>⚠️ Sensor NodeMCU Offline</strong>
-                        <span id="offline-duration-admin">Tidak ada data masuk selama lebih dari 5 menit</span>
-                    </div>
-                    <div class="offline-dot"></div>
-                </div>
+<!-- ══ SENSOR OFFLINE BANNER (Admin) ══ -->
+<div class="offline-banner" id="offline-banner-admin">
+    <div class="offline-icon-wrap">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.5 2l-1.5 1.5L17.5 2 16 3.5 17.5 5 16 6.5 17.5 8l1.5-1.5L20.5 8 22 6.5 20.5 5 22 3.5zM12 3C7.95 3 4.21 4.34 1.2 6.6L3 8.4C5.57 6.5 8.66 5.4 12 5.4c.78 0 1.55.07 2.29.21l2.1-2.1C15.03 3.19 13.54 3 12 3zm-9.8 1.2L.7 5.7 2.5 7.5C1.59 8.1.73 8.77 0 9.53L1.77 11.3C2.68 10.36 3.73 9.56 4.88 8.92L3.2 7.24C2.85 7.04 2.51 6.83 2.2 6.6zM12 8a11.93 11.93 0 00-7.03 2.27l1.77 1.77C8.12 10.76 10 10 12 10c1.42 0 2.74.39 3.88 1.04l2.05-2.05A9.93 9.93 0 0012 8zm0 4c-1.07 0-2.05.34-2.84.9l1.78 1.78c.34-.1.7-.18 1.06-.18.98 0 1.85.4 2.5 1.04l1.77-1.77C15.27 12.68 13.72 12 12 12zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
+        </svg>
+    </div>
+    <div class="offline-text">
+        <strong>⚠️ Sensor NodeMCU Offline</strong>
+        <span id="offline-duration-admin">Tidak ada data masuk selama lebih dari 5 menit</span>
+    </div>
+    <div class="offline-dot"></div>
+</div>
 
-                <!-- Debit Chart -->
-                <section class="chart-section glass-panel">
-                    <h3>Grafik Ketinggian Air Terpusat (Per 15 Menit)</h3>
-                    <div class="chart-container">
-                        <canvas id="adminWaterChart"></canvas>
-                    </div>
-                </section>
-                
-                <p class="refresh-time" style="text-align:center;">Sistem Aktif &amp; Terlindungi</p>
+<!-- Real-time Chart -->
+<section class="chart-section glass-panel">
+    <h3>Grafik Ketinggian Air Terpusat (Real-time)</h3>
+    <div class="chart-container">
+        <canvas id="adminWaterChart"></canvas>
+    </div>
+</section>
+
+<!-- Hourly History Chart (Bar) -->
+<section class="chart-section glass-panel">
+    <div class="history-header">
+        <div class="history-title-wrap">
+            <h3>Riwayat Tinggi Air Per Jam</h3>
+            <p>Data tersimpan selama 30 hari terakhir</p>
+        </div>
+        <div class="history-controls">
+            <input type="date" id="admin-history-date" class="history-date-picker">
+        </div>
+    </div>
+    <div class="chart-container" style="height: 300px;">
+        <canvas id="adminHistoryChart"></canvas>
+    </div>
+</section>
+
+<p class="refresh-time" style="text-align:center;">Sistem Aktif &amp; Terlindungi</p>
+
+<style>
+.highlight-panel {
+    padding: 18px 25px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+}
+.condition-info { display: flex; align-items: center; gap: 15px; }
+.emoji-large { font-size: 1.8rem; }
+.label-tiny { color: #64748b; margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.status-text { margin: 0; font-size: 1.35rem; font-weight: 800; }
+.text-green { color: #10b981; }
+.time-info { text-align: right; }
+.label-nano { font-size: 0.7rem; color: #94a3b8; margin: 0; }
+.value-mini { font-size: 0.85rem; font-weight: 700; color: #475569; margin: 0; }
+
+.history-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 15px; }
+.history-title-wrap h3 { margin: 0; font-size: 1rem; color: var(--text-primary); }
+.history-title-wrap p { margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary); }
+.history-date-picker { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.85rem; color: #475569; background: #fff; cursor: pointer; transition: 0.2s; }
+.history-date-picker:hover { border-color: var(--brand-primary); }
+
+@media (max-width: 600px) {
+    .history-header { flex-direction: column; align-items: stretch; }
+    .history-date-picker { width: 100%; }
+}
+</style>
