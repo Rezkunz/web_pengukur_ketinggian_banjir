@@ -24,6 +24,16 @@
     --glass-border: rgba(255, 255, 255, 0.8);
 }
 
+/* Sembunyikan Navigasi jika tidak sedang login */
+.bottom-nav {
+    display: none !important;
+}
+
+body.admin-view #admin-navbar,
+body.user-view #user-navbar {
+    display: flex !important;
+}
+
 * {
     margin: 0;
     padding: 0;

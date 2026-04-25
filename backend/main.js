@@ -62,14 +62,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (userData.role === 'admin') {
                 if (!viewAdminDash.innerHTML) {
-                    viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=48').then(r => r.text());
-                    viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=48').then(r => r.text());
-                    viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=48').then(r => r.text());
-                    viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=48').then(r => r.text());
+                    viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=49').then(r => r.text());
+                    viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=49').then(r => r.text());
+                    viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=49').then(r => r.text());
+                    viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=49').then(r => r.text());
                 }
                 adminNav.style.display = 'flex';
                 userNav.style.display = 'none';
-                document.body.classList.add('admin-view'); // Enable sidebar on mobile for admin
+                document.body.classList.add('admin-view');
+                document.body.classList.remove('user-view');
                 viewAdminDash.classList.add('active');
                 
                 bindDOM();
@@ -80,13 +81,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startDataListener(); 
             } else {
                 if (!viewMonitoring.innerHTML) {
-                    viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=48').then(r => r.text());
-                    viewDarurat.innerHTML = await fetch('views/darurat.html?v=48').then(r => r.text());
-                    viewLapor.innerHTML = await fetch('views/lapor.html?v=48').then(r => r.text());
-                    viewSaran.innerHTML = await fetch('views/saran.html?v=48').then(r => r.text());
+                    viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=50').then(r => r.text());
+                    viewDarurat.innerHTML = await fetch('views/darurat.html?v=50').then(r => r.text());
+                    viewLapor.innerHTML = await fetch('views/lapor.html?v=50').then(r => r.text());
+                    viewSaran.innerHTML = await fetch('views/saran.html?v=50').then(r => r.text());
                 }
                 userNav.style.display = 'flex';
                 adminNav.style.display = 'none';
+                document.body.classList.add('user-view');
                 document.body.classList.remove('admin-view');
                 viewMonitoring.classList.add('active');
 
@@ -98,8 +100,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             profileWrapper.style.display = 'none';
             userNav.style.display = 'none';
             adminNav.style.display = 'none';
+            document.body.classList.remove('admin-view');
+            document.body.classList.remove('user-view');
             if (!viewAuth.innerHTML) {
-                viewAuth.innerHTML = await fetch('views/auth.html?v=48').then(r => r.text());
+                viewAuth.innerHTML = await fetch('views/auth.html?v=50').then(r => r.text());
             }
             viewAuth.classList.add('active');
         }
