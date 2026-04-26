@@ -58,10 +58,8 @@ function initRealtimeChart(isAdmin) {
 
     if (waterChart) waterChart.destroy();
 
-    const placeholderLabels = Array.from({ length: CHART_MAX_POINTS }, (_, i) => {
-        const minutesAgo = (CHART_MAX_POINTS - 1 - i) * 15;
-        return minutesAgo === 0 ? 'Skrg' : `-${minutesAgo}m`;
-    });
+    // Generate placeholder labels with actual HH:MM times
+    const placeholderLabels = generateTimeSlotLabels();
 
     const ctx = canvasEl.getContext('2d');
     waterChart = new Chart(ctx, {
@@ -104,6 +102,29 @@ function initRealtimeChart(isAdmin) {
             }
         }
     });
+}
+
+/**
+ * Generate time slot labels based on current time
+ * Shows last CHART_MAX_POINTS slots in 15-min intervals
+ * e.g. at 11:00 → ['09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00']
+ */
+function generateTimeSlotLabels() {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // Round down to nearest 15-minute slot
+    const currentSlot = Math.floor(currentMinutes / 15) * 15;
+    
+    const labels = [];
+    for (let i = CHART_MAX_POINTS - 1; i >= 0; i--) {
+        const slotMinutes = currentSlot - (i * 15);
+        // Handle midnight wrap-around
+        const adjustedMinutes = ((slotMinutes % 1440) + 1440) % 1440;
+        const h = String(Math.floor(adjustedMinutes / 60)).padStart(2, '0');
+        const m = String(adjustedMinutes % 60).padStart(2, '0');
+        labels.push(`${h}:${m}`);
+    }
+    return labels;
 }
 
 function initHistoryChart(isAdmin = false) {
@@ -228,6 +249,7 @@ async function fetchHistoryData(dateStr) {
 
 function saveHourlyData(value) {
     if (!database || value === null || value === undefined) return;
+    if (isSensorOffline) return; // Jangan simpan data jam jika sensor offline
 
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
@@ -288,6 +310,7 @@ function startChartHistoryListener() {
 // Save Chart Point (Max 1x per 15 minutes)
 function saveChartPoint(value) {
     if (!database || value === null || value === undefined) return;
+    if (isSensorOffline) return; // Jangan simpan jika sensor offline
 
     const historyRef = database.ref(CHART_HISTORY_PATH);
     const now = Date.now();
@@ -307,6 +330,7 @@ function saveChartPoint(value) {
 
 function maybeSaveChartPoint(value) {
     if (!database) return;
+    if (isSensorOffline) return; // Jangan simpan jika sensor offline
 
     const historyRef = database.ref(CHART_HISTORY_PATH);
 
@@ -330,7 +354,7 @@ function maybeSaveChartPoint(value) {
 function startChartAutoSaveTimer() {
     if (chartIntervalTimer) clearInterval(chartIntervalTimer);
     chartIntervalTimer = setInterval(() => {
-        if (currentWaterLevel !== null && currentWaterLevel !== undefined) {
+        if (currentWaterLevel !== null && currentWaterLevel !== undefined && !isSensorOffline) {
             saveChartPoint(currentWaterLevel);
         }
     }, CHART_INTERVAL_MS);
@@ -505,6 +529,25 @@ function updateOfflineUI(offline, sinceText, reason) {
         alertMessage.textContent = 'Sensor Offline';
         alertMessage.style.color = '#888';
     }
+
+    // ── Chart offline overlays ──
+    updateChartOfflineOverlays(offline);
+}
+
+/**
+ * Toggle offline overlay pada semua grafik (user + admin)
+ */
+function updateChartOfflineOverlays(offline) {
+    const overlayIds = [
+        'chart-offline-realtime',
+        'chart-offline-history',
+        'chart-offline-admin-realtime',
+        'chart-offline-admin-history'
+    ];
+    overlayIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('visible', offline);
+    });
 }
 
 /**
@@ -658,11 +701,14 @@ function startDataListener() {
         
         updateUI(data);
 
-        // 5. Smart save chart (maks 1x per 15 menit)
-        maybeSaveChartPoint(data);
-        
-        // 6. Hourly data save (Mencatat setiap jam)
-        saveHourlyData(data);
+        // Hanya simpan data jika sensor online
+        if (!isSensorOffline) {
+            // 5. Smart save chart (maks 1x per 15 menit)
+            maybeSaveChartPoint(data);
+            
+            // 6. Hourly data save (Mencatat setiap jam)
+            saveHourlyData(data);
+        }
     });
 
     // 6. Real-time listener untuk sinkronisasi status offline awal

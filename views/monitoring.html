@@ -69,8 +69,18 @@
                 <!-- Debit Chart -->
                 <section class="chart-section glass-panel">
                     <h3>Grafik Ketinggian Air (Real-Time)</h3>
-                    <div class="chart-container">
+                    <div class="chart-container" style="position: relative;">
                         <canvas id="waterChart"></canvas>
+                        <!-- Offline Overlay -->
+                        <div class="chart-offline-overlay" id="chart-offline-realtime">
+                            <div class="chart-offline-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
+                                    <path d="M24 .01c0-.01 0-.01 0 0L0 .02v2l7.19-.02c.52 1.07.79 2.21.79 3.45 0 4.65-2.55 8.55-2.55 8.55v2h3.54c-.85 1.34-1.34 2.3-1.47 2.52-.06.12-.1.24-.1.38 0 .39.32.71.71.71h8.58c.39 0 .71-.32.71-.71 0-.14-.04-.26-.1-.38-.13-.22-.62-1.18-1.47-2.52h3.54v-2s-2.55-3.9-2.55-8.55c0-1.24.27-2.38.79-3.45l6.19-.02v-2zM12 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm4.5-12c0 .5-.05 1-.14 1.46-.19.88-.59 1.87-1.22 2.87-.14.21-.29.44-.45.68C13.78 12.37 13 13.85 12.5 15h-1c-.5-1.15-1.28-2.63-2.19-4-.16-.24-.31-.46-.45-.68-.63-1-1.03-1.99-1.22-2.87C7.55 7 7.5 6.5 7.5 6c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5z"/>
+                                </svg>
+                                <p class="offline-overlay-title">Sensor Tidak Aktif</p>
+                                <p class="offline-overlay-desc">Data grafik tidak dapat diperbarui karena sensor sedang offline</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -80,8 +90,18 @@
                         <h3>Riwayat Tinggi Air (Per Jam)</h3>
                         <input type="date" id="history-date-picker" class="history-date-input">
                     </div>
-                    <div class="chart-container" style="height: 250px;">
+                    <div class="chart-container" style="height: 250px; position: relative;">
                         <canvas id="historyChart"></canvas>
+                        <!-- Offline Overlay -->
+                        <div class="chart-offline-overlay" id="chart-offline-history">
+                            <div class="chart-offline-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
+                                    <path d="M24 .01c0-.01 0-.01 0 0L0 .02v2l7.19-.02c.52 1.07.79 2.21.79 3.45 0 4.65-2.55 8.55-2.55 8.55v2h3.54c-.85 1.34-1.34 2.3-1.47 2.52-.06.12-.1.24-.1.38 0 .39.32.71.71.71h8.58c.39 0 .71-.32.71-.71 0-.14-.04-.26-.1-.38-.13-.22-.62-1.18-1.47-2.52h3.54v-2s-2.55-3.9-2.55-8.55c0-1.24.27-2.38.79-3.45l6.19-.02v-2zM12 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm4.5-12c0 .5-.05 1-.14 1.46-.19.88-.59 1.87-1.22 2.87-.14.21-.29.44-.45.68C13.78 12.37 13 13.85 12.5 15h-1c-.5-1.15-1.28-2.63-2.19-4-.16-.24-.31-.46-.45-.68-.63-1-1.03-1.99-1.22-2.87C7.55 7 7.5 6.5 7.5 6c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5z"/>
+                                </svg>
+                                <p class="offline-overlay-title">Sensor Tidak Aktif</p>
+                                <p class="offline-overlay-desc">Data riwayat tidak dapat diperbarui karena sensor sedang offline</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
