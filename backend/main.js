@@ -90,7 +90,7 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 async function setupFCMToken(uid) {
-    const vapidKey = 'Wm4URg04btDDfqM_iEkAxE_PnynyJLVCzcd5dhOoFO0';
+    const vapidKey = 'BO45gbDhurKw3FKYmqpiOJ2HaJSK3DYVLG1OF6fUACSKy7DgCdLD9bSRzE4DNNN3OoiURKm1_ykQCEWhYJUr8Zc';
     if (!('Notification' in window)) return;
     
     if ('serviceWorker' in navigator) {
