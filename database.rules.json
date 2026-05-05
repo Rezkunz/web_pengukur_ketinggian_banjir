@@ -1,49 +1,38 @@
 {
   "rules": {
-    ".read": false,
-    ".write": false,
     "sensor_data": {
-      ".read": "auth !== null",
-      ".write": false,
-      "water_level": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 400" },
-      "ts": { ".validate": "newData.isNumber()" },
-      "chart_history": {
-        ".read": "auth !== null",
-        ".write": "auth !== null",
-        "$entry": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 400" }
-      }
-    },
-    "users": {
-        ".read": "auth !== null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
-        "$uid": {
-          ".read": "auth !== null && (auth.uid === $uid || root.child('users/' + auth.uid + '/role').val() === 'admin')",
-          ".write": "auth !== null && (auth.uid === $uid || root.child('users/' + auth.uid + '/role').val() === 'admin')"
-        }
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
     "history": {
-      ".read": "auth !== null",
-      ".write": "auth !== null",
-      "$date": {
-        "$hour": {
-          ".validate": "newData.isNumber() && newData.val() >= 0"
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        "fcm_tokens": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "role": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
         }
+      },
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "reports": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$reportId": {
+        ".write": "auth != null && (!data.exists() || root.child('users').child(auth.uid).child('role').val() === 'admin')"
       }
     },
-    "laporan": {
-      ".read": "auth !== null",
-      ".write": "auth !== null",
-      "$entryId": {
-        ".validate": "newData.hasChildren(['nama', 'lokasi', 'tingkat', 'uid', 'timestamp'])",
-        "uid": { ".validate": "newData.val() === auth.uid" }
-      }
-    },
-    "saran": {
-      ".read": "auth !== null",
-      ".write": "auth !== null",
-      "$entryId": {
-        ".validate": "newData.hasChildren(['email', 'pesan', 'uid', 'timestamp'])",
-        "uid": { ".validate": "newData.val() === auth.uid" }
-      }
+    "suggestions": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

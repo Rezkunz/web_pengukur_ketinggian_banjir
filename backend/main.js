@@ -40,14 +40,15 @@ auth.onAuthStateChanged(async (user) => {
             if (sidebarName)   sidebarName.textContent   = userData.nama;
         });
 
+        // Panggil pendaftaran token
         setupFCMToken(user.uid);
 
         if (userData.role === 'admin') {
             if (!viewAdminDash.innerHTML) {
-                viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=60').then(r => r.text());
-                viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=60').then(r => r.text());
-                viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=60').then(r => r.text());
-                viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=60').then(r => r.text());
+                viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=63').then(r => r.text());
+                viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=63').then(r => r.text());
+                viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=63').then(r => r.text());
+                viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=63').then(r => r.text());
             }
             if (adminNav) adminNav.style.display = 'flex';
             if (userNav) userNav.style.display = 'none';
@@ -61,10 +62,10 @@ auth.onAuthStateChanged(async (user) => {
             startDataListener(); 
         } else {
             if (!viewMonitoring.innerHTML) {
-                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=60').then(r => r.text());
-                viewDarurat.innerHTML = await fetch('views/darurat.html?v=60').then(r => r.text());
-                viewLapor.innerHTML = await fetch('views/lapor.html?v=60').then(r => r.text());
-                viewSaran.innerHTML = await fetch('views/saran.html?v=60').then(r => r.text());
+                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=63').then(r => r.text());
+                viewDarurat.innerHTML = await fetch('views/darurat.html?v=63').then(r => r.text());
+                viewLapor.innerHTML = await fetch('views/lapor.html?v=63').then(r => r.text());
+                viewSaran.innerHTML = await fetch('views/saran.html?v=63').then(r => r.text());
             }
             if (userNav) userNav.style.display = 'flex';
             if (adminNav) adminNav.style.display = 'none';
@@ -82,7 +83,7 @@ auth.onAuthStateChanged(async (user) => {
         document.body.classList.remove('admin-view');
         document.body.classList.remove('user-view');
         if (!viewAuth.innerHTML) {
-            viewAuth.innerHTML = await fetch('views/auth.html?v=60').then(r => r.text());
+            viewAuth.innerHTML = await fetch('views/auth.html?v=63').then(r => r.text());
         }
         viewAuth.classList.add('active');
     }
@@ -91,58 +92,67 @@ auth.onAuthStateChanged(async (user) => {
 async function setupFCMToken(uid) {
     const vapidKey = 'Wm4URg04btDDfqM_iEkAxE_PnynyJLVCzcd5dhOoFO0';
     if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-        const modal = document.getElementById('fcm-permission-modal');
-        const btnAllow = document.getElementById('btn-fcm-allow');
-        if (modal) {
-            modal.classList.add('show');
-            if (btnAllow) {
-                btnAllow.onclick = async () => {
-                    const permission = await Notification.requestPermission();
-                    modal.classList.remove('show');
-                    if (permission === 'granted') {
-                        registerToken(uid, vapidKey);
+    
+    // Pastikan Service Worker sudah SIAP sebelum mendaftarkan Token
+    if ('serviceWorker' in navigator) {
+        try {
+            await navigator.serviceWorker.ready; // TUNGGU DISINI
+            
+            if (Notification.permission === 'default') {
+                const modal = document.getElementById('fcm-permission-modal');
+                const btnAllow = document.getElementById('btn-fcm-allow');
+                if (modal) {
+                    modal.classList.add('show');
+                    if (btnAllow) {
+                        btnAllow.onclick = async () => {
+                            const permission = await Notification.requestPermission();
+                            modal.classList.remove('show');
+                            if (permission === 'granted') {
+                                registerToken(uid, vapidKey);
+                            }
+                        };
                     }
-                };
+                }
+            } else if (Notification.permission === 'granted') {
+                registerToken(uid, vapidKey);
             }
+        } catch (e) {
+            console.error("Service Worker tidak siap:", e);
         }
-    } else if (Notification.permission === 'granted') {
-        registerToken(uid, vapidKey);
     }
 }
 
 async function registerToken(uid, vapidKey) {
     try {
         const messaging = firebase.messaging();
-        const currentToken = await messaging.getToken({ vapidKey: vapidKey });
-        if (currentToken) {
-            if (database) {
-                const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
-                await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(currentToken);
-                console.log('FCM Token (' + tokenKey + ') berhasil disimpan ke list tokens.');
+        // Gunakan timeout sedikit agar pendaftaran push manager benar-benar settle
+        setTimeout(async () => {
+            try {
+                const currentToken = await messaging.getToken({ vapidKey: vapidKey });
+                if (currentToken) {
+                    if (database) {
+                        const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
+                        await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(currentToken);
+                        console.log('FCM Token (' + tokenKey + ') berhasil didaftarkan.');
+                    }
+                }
+            } catch (err) {
+                console.error("Gagal mendapatkan token:", err);
             }
-        }
-        messaging.onTokenRefresh(async () => {
-            const refreshedToken = await messaging.getToken({ vapidKey: vapidKey });
-            if (refreshedToken && database) {
-                const tokenKey = btoa(refreshedToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
-                await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(refreshedToken);
-            }
-        });
-        messaging.onMessage((payload) => {
-            if(typeof sendNotification === 'function' && payload.notification) {
-                sendNotification(payload.notification.title, { body: payload.notification.body });
-            }
-        });
+        }, 1000);
     } catch(err) {
-        console.error("Gagal register token:", err);
+        console.error("Gagal inisialisasi messaging:", err);
     }
 }
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/firebase-messaging-sw.js')
-            .then(reg => console.log('SW Reg!', reg))
+            .then(reg => {
+                console.log('SW Reg!', reg);
+                // Paksa update jika ada versi baru
+                reg.update();
+            })
             .catch(err => console.error('SW Fail', err));
     });
 }
