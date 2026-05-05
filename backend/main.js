@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
 
         if (user) {
-            profileWrapper.style.display = 'flex';
+            if (profileWrapper) profileWrapper.style.display = 'flex';
             
             let snapshot = null;
             if(database) {
@@ -37,8 +37,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const userData = snapshot && snapshot.exists() ? snapshot.val() : { nama: 'User', role: 'user' };
             
-            document.getElementById('header-name').textContent = userData.nama;
-            document.getElementById('header-avatar').textContent = userData.nama.charAt(0).toUpperCase();
+            const headerName = document.getElementById('header-name');
+            const headerAvatar = document.getElementById('header-avatar');
+            if (headerName) headerName.textContent = userData.nama;
+            if (headerAvatar) headerAvatar.textContent = userData.nama.charAt(0).toUpperCase();
 
             // Sync ke sidebar profile (desktop)
             const initial = userData.nama.charAt(0).toUpperCase();
@@ -101,9 +103,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startDataListener();
             }
         } else {
-            profileWrapper.style.display = 'none';
-            userNav.style.display = 'none';
-            adminNav.style.display = 'none';
+            if (profileWrapper) profileWrapper.style.display = 'none';
+            if (userNav) userNav.style.display = 'none';
+            if (adminNav) adminNav.style.display = 'none';
             document.body.classList.remove('admin-view');
             document.body.classList.remove('user-view');
             if (!viewAuth.innerHTML) {
@@ -210,4 +212,42 @@ async function registerToken(uid, vapidKey) {
     } catch(err) {
         console.error("Gagal register token:", err);
     }
+}
+
+// --- LOGIKA PWA INSTALL BANNER ---
+let deferredPrompt;
+const pwaBanner = document.getElementById('pwa-install-banner');
+const btnInstallPwa = document.getElementById('btn-pwa-install');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Mencegah Chrome memunculkan infobar standar dari bawah
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Tampilkan banner custom kita
+    if (pwaBanner) {
+        setTimeout(() => pwaBanner.classList.add('show'), 2000); // Muncul setelah 2 detik
+    }
+});
+
+if (btnInstallPwa) {
+    btnInstallPwa.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        // Sembunyikan banner custom
+        pwaBanner.classList.remove('show');
+        
+        // Tampilkan prompt install bawaan HP (Native Install Prompt)
+        deferredPrompt.prompt();
+        
+        // Tunggu respon pengguna
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`PWA install prompt outcome: ${outcome}`);
+        
+        deferredPrompt = null;
+    });
+}
+
+window.closePWAInstallBanner = function() {
+    if (pwaBanner) pwaBanner.classList.remove('show');
 }
