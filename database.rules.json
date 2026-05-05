@@ -1,11 +1,10 @@
 {
   "rules": {
+    ".read": "auth != null",
     "sensor_data": {
-      ".read": "auth != null",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
     "history": {
-      ".read": "auth != null",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
     "users": {
@@ -13,25 +12,14 @@
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         "fcm_tokens": {
-          ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && auth.uid === $uid"
-        },
-        "role": {
-          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
         }
-      },
-      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-    },
-    "reports": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      "$reportId": {
-        ".write": "auth != null && (!data.exists() || root.child('users').child(auth.uid).child('role').val() === 'admin')"
       }
     },
+    "reports": {
+      ".write": "auth != null"
+    },
     "suggestions": {
-      ".read": "auth != null",
       ".write": "auth != null"
     }
   }

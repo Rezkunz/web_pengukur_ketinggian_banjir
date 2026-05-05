@@ -125,13 +125,13 @@ async function setupFCMToken(uid) {
                             const permission = await Notification.requestPermission();
                             modal.classList.remove('show');
                             if (permission === 'granted') {
-                                registerToken(uid, vapidKey);
+                                registerToken(uid, vapidKey, reg);
                             }
                         };
                     }
                 }
             } else if (Notification.permission === 'granted') {
-                registerToken(uid, vapidKey);
+                registerToken(uid, vapidKey, reg);
             }
         } catch (e) {
             console.error("Gagal inisialisasi SW Notifikasi:", e);
@@ -139,13 +139,16 @@ async function setupFCMToken(uid) {
     }
 }
 
-async function registerToken(uid, vapidKey) {
+async function registerToken(uid, vapidKey, registration) {
     try {
         const messaging = firebase.messaging();
-        // Gunakan timeout sedikit agar pendaftaran push manager benar-benar settle
+        // Tunggu sebentar agar browser siap melakukan subscribe
         setTimeout(async () => {
             try {
-                const currentToken = await messaging.getToken({ vapidKey: vapidKey });
+                const currentToken = await messaging.getToken({ 
+                    vapidKey: vapidKey,
+                    serviceWorkerRegistration: registration 
+                });
                 if (currentToken) {
                     if (database) {
                         const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
@@ -156,7 +159,7 @@ async function registerToken(uid, vapidKey) {
             } catch (err) {
                 console.error("Gagal mendapatkan token:", err);
             }
-        }, 1000);
+        }, 1500);
     } catch(err) {
         console.error("Gagal inisialisasi messaging:", err);
     }
