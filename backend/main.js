@@ -3,15 +3,21 @@ auth.onAuthStateChanged(async (user) => {
     const profileWrapper = document.getElementById('profile-wrapper');
     const userNav = document.getElementById('user-navbar');
     const adminNav = document.getElementById('admin-navbar');
+    
+    // View Sections
+    const views = document.querySelectorAll('.view-section');
+    const viewAuth = document.getElementById('view-auth');
     const viewMonitoring = document.getElementById('view-monitoring');
     const viewDarurat = document.getElementById('view-darurat');
     const viewLapor = document.getElementById('view-lapor');
     const viewSaran = document.getElementById('view-saran');
-    const viewAuth = document.getElementById('view-auth');
     const viewAdminDash = document.getElementById('view-admin-dashboard');
     const viewAdminLapor = document.getElementById('view-admin-laporan');
     const viewAdminSaran = document.getElementById('view-admin-saran');
     const viewAdminMembers = document.getElementById('view-admin-members');
+
+    // Sembunyikan SEMUA view dulu agar tidak bertumpukan
+    views.forEach(v => v.classList.remove('active'));
 
     if (user) {
         if (profileWrapper) profileWrapper.style.display = 'flex';
@@ -38,13 +44,13 @@ auth.onAuthStateChanged(async (user) => {
 
         if (userData.role === 'admin') {
             if (!viewAdminDash.innerHTML) {
-                viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=59').then(r => r.text());
-                viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=59').then(r => r.text());
-                viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=59').then(r => r.text());
-                viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=59').then(r => r.text());
+                viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=60').then(r => r.text());
+                viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=60').then(r => r.text());
+                viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=60').then(r => r.text());
+                viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=60').then(r => r.text());
             }
-            adminNav.style.display = 'flex';
-            userNav.style.display = 'none';
+            if (adminNav) adminNav.style.display = 'flex';
+            if (userNav) userNav.style.display = 'none';
             document.body.classList.add('admin-view');
             document.body.classList.remove('user-view');
             viewAdminDash.classList.add('active');
@@ -55,13 +61,13 @@ auth.onAuthStateChanged(async (user) => {
             startDataListener(); 
         } else {
             if (!viewMonitoring.innerHTML) {
-                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=59').then(r => r.text());
-                viewDarurat.innerHTML = await fetch('views/darurat.html?v=59').then(r => r.text());
-                viewLapor.innerHTML = await fetch('views/lapor.html?v=59').then(r => r.text());
-                viewSaran.innerHTML = await fetch('views/saran.html?v=59').then(r => r.text());
+                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=60').then(r => r.text());
+                viewDarurat.innerHTML = await fetch('views/darurat.html?v=60').then(r => r.text());
+                viewLapor.innerHTML = await fetch('views/lapor.html?v=60').then(r => r.text());
+                viewSaran.innerHTML = await fetch('views/saran.html?v=60').then(r => r.text());
             }
-            userNav.style.display = 'flex';
-            adminNav.style.display = 'none';
+            if (userNav) userNav.style.display = 'flex';
+            if (adminNav) adminNav.style.display = 'none';
             document.body.classList.add('user-view');
             document.body.classList.remove('admin-view');
             viewMonitoring.classList.add('active');
@@ -76,7 +82,7 @@ auth.onAuthStateChanged(async (user) => {
         document.body.classList.remove('admin-view');
         document.body.classList.remove('user-view');
         if (!viewAuth.innerHTML) {
-            viewAuth.innerHTML = await fetch('views/auth.html?v=59').then(r => r.text());
+            viewAuth.innerHTML = await fetch('views/auth.html?v=60').then(r => r.text());
         }
         viewAuth.classList.add('active');
     }
