@@ -85,6 +85,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 listenAdminData();
                 startMembersListener();
                 startDataListener(); 
+                
+                // Update UI status notif setelah view dimuat
+                setTimeout(() => {
+                    if ('Notification' in window) updateNotificationStatusUI(Notification.permission);
+                }, 500);
             } else {
                 if (!viewMonitoring.innerHTML) {
                     viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=54').then(r => r.text());
@@ -101,6 +106,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 bindDOM();
                 initChart(false);
                 startDataListener();
+
+                // Update UI status notif setelah view dimuat
+                setTimeout(() => {
+                    if ('Notification' in window) updateNotificationStatusUI(Notification.permission);
+                }, 500);
             }
         } else {
             if (profileWrapper) profileWrapper.style.display = 'none';
@@ -269,41 +279,42 @@ window.closePWAInstallBanner = function() {
 
 // --- LOGIKA STATUS NOTIFIKASI DASHBOARD ---
 function updateNotificationStatusUI(permission) {
-    const statusBox = document.getElementById('notif-status-box');
-    const statusText = document.getElementById('notif-status-text');
-    const statusIcon = document.getElementById('notif-status-icon');
-    const statusBtn = document.getElementById('notif-status-btn');
+    const statusBoxes = document.querySelectorAll('.notif-status-card');
+    
+    statusBoxes.forEach(box => {
+        const text = box.querySelector('h4');
+        const icon = box.querySelector('span');
+        const btn = box.querySelector('button');
 
-    if (!statusBox) return;
-
-    if (permission === 'granted') {
-        statusBox.className = 'notif-status-card success';
-        statusText.textContent = 'Notifikasi Aktif';
-        statusIcon.innerHTML = '🔔';
-        if (statusBtn) statusBtn.style.display = 'none';
-    } else if (permission === 'denied') {
-        statusBox.className = 'notif-status-card danger';
-        statusText.textContent = 'Notifikasi Diblokir';
-        statusIcon.innerHTML = '🚫';
-        if (statusBtn) {
-            statusBtn.style.display = 'block';
-            statusBtn.textContent = 'Cara Buka Blokir';
-            statusBtn.onclick = () => showNotifHelp('denied');
+        if (permission === 'granted') {
+            box.className = 'notif-status-card success';
+            if (text) text.textContent = 'Notifikasi Aktif';
+            if (icon) icon.innerHTML = '🔔';
+            if (btn) btn.style.display = 'none';
+        } else if (permission === 'denied') {
+            box.className = 'notif-status-card danger';
+            if (text) text.textContent = 'Notifikasi Diblokir';
+            if (icon) icon.innerHTML = '🚫';
+            if (btn) {
+                btn.style.display = 'block';
+                btn.textContent = 'Cara Buka Blokir';
+                btn.onclick = () => showNotifHelp('denied');
+            }
+        } else {
+            box.className = 'notif-status-card warning';
+            if (text) text.textContent = 'Notifikasi Belum Aktif';
+            if (icon) icon.innerHTML = '⚠️';
+            if (btn) {
+                btn.style.display = 'block';
+                btn.textContent = 'Aktifkan Sekarang';
+                btn.onclick = () => {
+                    if (window.setupFCMToken && auth.currentUser) {
+                        window.setupFCMToken(auth.currentUser.uid);
+                    }
+                };
+            }
         }
-    } else {
-        statusBox.className = 'notif-status-card warning';
-        statusText.textContent = 'Notifikasi Belum Aktif';
-        statusIcon.innerHTML = '⚠️';
-        if (statusBtn) {
-            statusBtn.style.display = 'block';
-            statusBtn.textContent = 'Aktifkan Sekarang';
-            statusBtn.onclick = () => {
-                if (window.setupFCMToken && auth.currentUser) {
-                    window.setupFCMToken(auth.currentUser.uid);
-                }
-            };
-        }
-    }
+    });
 }
 
 // Pantau perubahan izin secara berkala (karena browser tidak punya event listener untuk ini)
