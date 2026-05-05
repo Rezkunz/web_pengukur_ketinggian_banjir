@@ -1,8 +1,6 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
-// Initialize the Firebase app in the service worker by passing in
-// your app's Firebase config object.
 const firebaseConfig = {
     apiKey: "AIzaSyChO4h8v33LB_ovIXcBg-yVJrmN40N0WUk",
     authDomain: "safe-93f61.firebaseapp.com",
@@ -15,18 +13,47 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
+// Handle Background Messages
 messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    const notificationTitle = payload.notification ? payload.notification.title : 'Peringatan Banjir';
+    console.log('[SW] Pesan Latar Belakang Diterima:', payload);
+    
+    const notificationTitle = payload.notification ? payload.notification.title : '🚨 PERINGATAN BANJIR';
     const notificationOptions = {
-        body: payload.notification ? payload.notification.body : 'Level air telah berubah secara drastis.',
+        body: payload.notification ? payload.notification.body : 'Level air dalam kondisi bahaya! Segera cek aplikasi.',
         icon: '/logo.png',
         badge: '/logo.png',
-        vibrate: [200, 100, 200, 100, 200]
+        vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110, 170, 40], // SOS Pattern
+        tag: 'flood-alert', // Mencegah notifikasi menumpuk banyak
+        renotify: true, // Bergetar lagi jika ada notifikasi baru dengan tag sama
+        requireInteraction: true, // Notifikasi tidak hilang sampai diklik
+        data: {
+            url: '/' // Bisa diarahkan ke halaman spesifik
+        },
+        actions: [
+            { action: 'open', title: 'Buka Aplikasi' }
+        ]
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle Notification Click
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            if (clientList.length > 0) {
+                let client = clientList[0];
+                for (let i = 0; i < clientList.length; i++) {
+                    if (clientList[i].focused) {
+                        client = clientList[i];
+                    }
+                }
+                return client.focus();
+            }
+            return clients.openWindow('/');
+        })
+    );
 });
