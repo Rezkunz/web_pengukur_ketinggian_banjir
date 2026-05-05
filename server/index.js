@@ -1,22 +1,37 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const http = require('http'); // Tambahan untuk Render
 
-// Pastikan file serviceAccountKey.json ada di folder yang sama
-const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
-
-if (!fs.existsSync(serviceAccountPath)) {
-    console.error("ERROR: File serviceAccountKey.json tidak ditemukan!");
-    console.error("Silakan download dari Firebase Console -> Project Settings -> Service Accounts -> Generate New Private Key.");
-    process.exit(1);
-}
-
-const serviceAccount = require(serviceAccountPath);
+// --- DUMMY HTTP SERVER UNTUK RENDER ---
+// Render 'Web Service' mewajibkan aplikasi membuka sebuah port
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot Notification Server is Running OK!');
+}).listen(PORT, () => {
+    console.log(`Dummy server listening on port ${PORT} (Required by Render)`);
+});
+// --------------------------------------
 
 // Inisialisasi Firebase Admin
+let serviceAccount;
+
+// Cek apakah pakai Environment Variable (dari Render) atau File lokal
+if (process.env.FIREBASE_CREDENTIALS) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+} else {
+    const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+    if (!fs.existsSync(serviceAccountPath)) {
+        console.error("ERROR: Kredensial tidak ditemukan!");
+        process.exit(1);
+    }
+    serviceAccount = require(serviceAccountPath);
+}
+
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app" // Pastikan URL ini benar
+    databaseURL: "https://safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app" 
 });
 
 const db = admin.database();
