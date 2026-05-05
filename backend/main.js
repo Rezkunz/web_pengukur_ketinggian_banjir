@@ -38,10 +38,10 @@ auth.onAuthStateChanged(async (user) => {
 
         if (userData.role === 'admin') {
             if (!viewAdminDash.innerHTML) {
-                viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=58').then(r => r.text());
-                viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=58').then(r => r.text());
-                viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=58').then(r => r.text());
-                viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=58').then(r => r.text());
+                viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=59').then(r => r.text());
+                viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=59').then(r => r.text());
+                viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=59').then(r => r.text());
+                viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=59').then(r => r.text());
             }
             adminNav.style.display = 'flex';
             userNav.style.display = 'none';
@@ -53,15 +53,12 @@ auth.onAuthStateChanged(async (user) => {
             listenAdminData();
             startMembersListener();
             startDataListener(); 
-            setTimeout(() => {
-                if ('Notification' in window) updateNotificationStatusUI(Notification.permission);
-            }, 500);
         } else {
             if (!viewMonitoring.innerHTML) {
-                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=58').then(r => r.text());
-                viewDarurat.innerHTML = await fetch('views/darurat.html?v=58').then(r => r.text());
-                viewLapor.innerHTML = await fetch('views/lapor.html?v=58').then(r => r.text());
-                viewSaran.innerHTML = await fetch('views/saran.html?v=58').then(r => r.text());
+                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=59').then(r => r.text());
+                viewDarurat.innerHTML = await fetch('views/darurat.html?v=59').then(r => r.text());
+                viewLapor.innerHTML = await fetch('views/lapor.html?v=59').then(r => r.text());
+                viewSaran.innerHTML = await fetch('views/saran.html?v=59').then(r => r.text());
             }
             userNav.style.display = 'flex';
             adminNav.style.display = 'none';
@@ -71,9 +68,6 @@ auth.onAuthStateChanged(async (user) => {
             bindDOM();
             initChart(false);
             startDataListener();
-            setTimeout(() => {
-                if ('Notification' in window) updateNotificationStatusUI(Notification.permission);
-            }, 500);
         }
     } else {
         if (profileWrapper) profileWrapper.style.display = 'none';
@@ -82,7 +76,7 @@ auth.onAuthStateChanged(async (user) => {
         document.body.classList.remove('admin-view');
         document.body.classList.remove('user-view');
         if (!viewAuth.innerHTML) {
-            viewAuth.innerHTML = await fetch('views/auth.html?v=58').then(r => r.text());
+            viewAuth.innerHTML = await fetch('views/auth.html?v=59').then(r => r.text());
         }
         viewAuth.classList.add('active');
     }
@@ -119,7 +113,7 @@ async function registerToken(uid, vapidKey) {
             if (database) {
                 const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
                 await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(currentToken);
-                updateNotificationStatusUI('granted');
+                console.log('FCM Token (' + tokenKey + ') berhasil disimpan ke list tokens.');
             }
         }
         messaging.onTokenRefresh(async () => {
@@ -168,91 +162,6 @@ window.closePWAInstallBanner = function() {
     if (pwaBanner) pwaBanner.classList.remove('show');
 }
 
-function updateNotificationStatusUI(permission) {
-    const statusBoxes = document.querySelectorAll('.notif-status-card');
-    statusBoxes.forEach(box => {
-        const text = box.querySelector('h4');
-        const icon = box.querySelector('span');
-        const btn = box.querySelector('button');
-        if (permission === 'granted') {
-            box.className = 'notif-status-card success';
-            if (text) text.textContent = 'Notifikasi Aktif';
-            if (icon) icon.innerHTML = '🔔';
-            if (btn) btn.style.display = 'none';
-        } else if (permission === 'denied') {
-            box.className = 'notif-status-card danger';
-            if (text) text.textContent = 'Notifikasi Diblokir';
-            if (icon) icon.innerHTML = '🚫';
-            if (btn) {
-                btn.style.display = 'block';
-                btn.textContent = 'Cara Buka Blokir';
-                btn.onclick = () => showNotifHelp('denied');
-            }
-        } else {
-            box.className = 'notif-status-card warning';
-            if (text) text.textContent = 'Notifikasi Belum Aktif';
-            if (icon) icon.innerHTML = '⚠️';
-            if (btn) {
-                btn.style.display = 'block';
-                btn.textContent = 'Aktifkan Sekarang';
-                btn.onclick = () => {
-                    if (window.setupFCMToken && auth.currentUser) {
-                        window.setupFCMToken(auth.currentUser.uid);
-                    }
-                };
-            }
-        }
-    });
-}
-
-setInterval(() => {
-    if ('Notification' in window) updateNotificationStatusUI(Notification.permission);
-}, 5000);
-
-function showNotifHelp(type) {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isAndroid = /Android/.test(navigator.userAgent);
-    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-
-    if (isIOS && !isStandalone) {
-        const overlay = document.getElementById('ios-onboarding');
-        if (overlay) overlay.style.display = 'flex';
-        return;
-    }
-    
-    let helpTitle = "Cara Mengaktifkan Notifikasi";
-    let helpDesc = "Ikuti langkah di bawah ini:";
-    if (isIOS) {
-        helpTitle = "Panduan iPhone (iOS)";
-        helpDesc = "1. Anda sudah menginstall aplikasi.\n2. Klik tombol 'Izinkan' di dalam aplikasi ini.\n3. Pastikan Settings -> Notifications -> SAFE sudah On.";
-    } else if (isAndroid && type === 'denied') {
-        helpTitle = "Buka Blokir Android";
-        helpDesc = "1. Klik ikon Gembok di baris alamat.\n2. Pilih Site Settings.\n3. Pilih Notifications -> Allow.";
-    } else if (type === 'denied') {
-        helpTitle = "Buka Blokir Browser";
-        helpDesc = "1. Klik ikon Gembok di sebelah URL.\n2. Ubah Notifikasi menjadi Allow.";
-    }
-    if (typeof showSuccessModal === 'function') {
-        showSuccessModal(helpTitle, helpDesc);
-    }
-}
-
-window.closeIOSOnboarding = function() {
-    const overlay = document.getElementById('ios-onboarding');
-    if (overlay) overlay.style.display = 'none';
-}
-
-window.addEventListener('load', () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-    if (isIOS && !isStandalone) {
-        setTimeout(() => {
-            const overlay = document.getElementById('ios-onboarding');
-            if (overlay) overlay.style.display = 'flex';
-        }, 3000);
-    }
-});
-
 // --- WHATSAPP LOGIC ---
 async function saveWaNumber() {
     if (!auth.currentUser) return;
@@ -276,11 +185,11 @@ async function saveWaNumber() {
     try {
         await database.ref('users/' + auth.currentUser.uid + '/wa_number').set(number);
         if (statusText) {
-            statusText.textContent = "Nomor berhasil disimpan! (Format: " + number + ")";
+            statusText.textContent = "Nomor berhasil disimpan!";
             statusText.classList.add('success');
         }
         if (typeof showSuccessModal === 'function') {
-            showSuccessModal("WhatsApp Berhasil", "Nomor Anda telah terdaftar untuk menerima alarm.");
+            showSuccessModal("WhatsApp Berhasil", "Nomor Admin telah terdaftar untuk menerima alarm.");
         }
     } catch (e) {
         console.error(e);
@@ -305,9 +214,12 @@ async function loadWaNumber(uid) {
     } catch (e) {}
 }
 
-// Panggil loadWaNumber saat login
-auth.onAuthStateChanged((user) => {
+// Panggil loadWaNumber saat login (hanya jika admin)
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        setTimeout(() => loadWaNumber(user.uid), 1000);
+        const snap = await database.ref('users/' + user.uid + '/role').once('value');
+        if (snap.exists() && snap.val() === 'admin') {
+            setTimeout(() => loadWaNumber(user.uid), 1500);
+        }
     }
 });
