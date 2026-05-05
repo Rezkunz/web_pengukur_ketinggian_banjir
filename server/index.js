@@ -2,6 +2,8 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 const http = require('http'); // Tambahan untuk Render
+const axios = require('axios');
+require('dotenv').config();
 
 // --- DUMMY HTTP SERVER UNTUK RENDER ---
 // Render 'Web Service' mewajibkan aplikasi membuka sebuah port
@@ -69,6 +71,7 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
     if (newStatus !== "Aman" && newStatus !== currentStatus) {
         console.log(`[${new Date().toISOString()}] Status berubah menjadi ${newStatus}. Mengirim notifikasi...`);
         await sendNotificationToAllUsers(title, body);
+        await sendWhatsAppAlerts(title, body);
     }
 
     currentStatus = newStatus;
@@ -129,6 +132,45 @@ async function sendNotificationToAllUsers(title, body) {
         // Namun untuk kesederhanaan, kita biarkan saja dulu.
     } catch (error) {
         console.error("Gagal mengirim notifikasi:", error);
+    }
+}
+
+async function sendWhatsAppAlerts(title, body) {
+    if (!process.env.FONNTE_TOKEN) {
+        console.log("[WhatsApp] FONNTE_TOKEN tidak diatur. Dilewati.");
+        return;
+    }
+
+    try {
+        const usersSnap = await db.ref('users').once('value');
+        const users = usersSnap.val();
+        if (!users) return;
+
+        const numbers = [];
+        Object.keys(users).forEach(uid => {
+            if (users[uid].wa_number) {
+                numbers.push(users[uid].wa_number);
+            }
+        });
+
+        if (numbers.length === 0) {
+            console.log("[WhatsApp] Tidak ada nomor WA terdaftar.");
+            return;
+        }
+
+        const message = `*${title}*\n\n${body}\n\n_Sistem SAFE Flood Monitoring_`;
+        
+        const response = await axios.post('https://api.fonnte.com/send', {
+            target: numbers.join(','),
+            message: message,
+        }, {
+            headers: {
+                'Authorization': process.env.FONNTE_TOKEN
+            }
+        });
+        console.log(`[WhatsApp] Status: ${response.data.status ? 'Berhasil' : 'Gagal'}. Dikirim ke ${numbers.length} nomor.`);
+    } catch (error) {
+        console.error("[WhatsApp] Error:", error.message);
     }
 }
 
