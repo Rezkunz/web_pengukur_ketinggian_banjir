@@ -12,31 +12,33 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const messaging = firebase.messaging();
 
 // Handle Background Messages
 messaging.onBackgroundMessage((payload) => {
     console.log('[SW] Pesan Latar Belakang Diterima:', payload);
     
-    const notificationTitle = payload.notification ? payload.notification.title : '🚨 PERINGATAN BANJIR';
+    // Ambil data dari payload notification ATAU payload data
+    const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || '🚨 PERINGATAN BANJIR';
+    const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Level air dalam kondisi bahaya!';
+
     const notificationOptions = {
-        body: payload.notification ? payload.notification.body : 'Level air dalam kondisi bahaya! Segera cek aplikasi.',
+        body: body,
         icon: '/logo.png',
         badge: '/logo.png',
-        vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110, 170, 40], // SOS Pattern
-        tag: 'flood-alert', // Mencegah notifikasi menumpuk banyak
-        renotify: true, // Bergetar lagi jika ada notifikasi baru dengan tag sama
-        requireInteraction: true, // Notifikasi tidak hilang sampai diklik
+        vibrate: [500, 110, 500, 110, 450, 110, 200, 110],
+        tag: 'flood-alert',
+        renotify: true,
+        requireInteraction: true,
         data: {
-            url: '/' // Bisa diarahkan ke halaman spesifik
+            url: '/'
         },
         actions: [
             { action: 'open', title: 'Buka Aplikasi' }
         ]
     };
 
-    return self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(title, notificationOptions);
 });
 
 // Handle Notification Click

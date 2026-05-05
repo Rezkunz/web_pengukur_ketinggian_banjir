@@ -4,7 +4,6 @@ const path = require('path');
 const http = require('http'); // Tambahan untuk Render
 
 // --- DUMMY HTTP SERVER UNTUK RENDER ---
-// Render 'Web Service' mewajibkan aplikasi membuka sebuah port
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -12,11 +11,9 @@ http.createServer((req, res) => {
 }).listen(PORT, () => {
     console.log(`Dummy server listening on port ${PORT} (Required by Render)`);
 });
-// --------------------------------------
 
 // Inisialisasi Firebase Admin
 let serviceAccount;
-
 if (process.env.FIREBASE_CREDENTIALS) {
     serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 } else {
@@ -40,7 +37,6 @@ console.log("Menghubungkan ke Firebase Database...");
 
 const LEVEL_SIAGA1 = 200;
 const LEVEL_SIAGA2 = 300;
-
 let currentStatus = "Aman";
 
 db.ref('sensor_data/water_level').on('value', async (snapshot) => {
@@ -54,7 +50,7 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
     if (waterLevel >= LEVEL_SIAGA2) {
         newStatus = "Siaga 2";
         title = "🚨 SIAGA 2 — Bahaya!";
-        body = `Ketinggian air mencapai ${waterLevel}cm. Segera evakuasi ke tempat aman!`;
+        body = `Ketinggian air mencapai ${waterLevel}cm. Segera evakuasi!`;
     } else if (waterLevel >= LEVEL_SIAGA1) {
         newStatus = "Siaga 1";
         title = "⚠️ SIAGA 1 — Waspada!";
@@ -65,7 +61,6 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
         console.log(`[${new Date().toISOString()}] Status berubah menjadi ${newStatus}. Mengirim notifikasi...`);
         await sendNotificationToAllUsers(title, body);
     }
-
     currentStatus = newStatus;
 });
 
@@ -84,31 +79,50 @@ async function sendNotificationToAllUsers(title, body) {
                     if (token && typeof token === 'string') tokens.push(token);
                 });
             }
-            if (user.fcm_token) tokens.push(user.fcm_token);
         });
 
         if (tokens.length === 0) {
-            console.log("Tidak ada token FCM yang ditemukan di database.");
+            console.log("Tidak ada token FCM aktif.");
             return;
         }
 
+        // Multicast Message dengan Prioritas Tinggi
         const message = {
             notification: { title: title, body: body },
-            webpush: {
+            data: {
+                title: title,
+                body: body,
+                click_action: "FLUTTER_NOTIFICATION_CLICK" // Sering membantu untuk background
+            },
+            android: {
+                priority: "high",
                 notification: {
+                    sound: "default",
+                    clickAction: "TOP_STORY_ACTIVITY"
+                }
+            },
+            webpush: {
+                headers: {
+                    Urgency: "high"
+                },
+                notification: {
+                    title: title,
+                    body: body,
                     icon: "https://img.icons8.com/color/192/siren.png",
-                    vibrate: [300, 100, 300, 100, 300],
-                    requireInteraction: true
+                    badge: "https://img.icons8.com/color/192/siren.png",
+                    vibrate: [500, 110, 500, 110, 450, 110, 200, 110],
+                    requireInteraction: true,
+                    tag: 'flood-alert'
                 }
             },
             tokens: tokens
         };
 
         const response = await messaging.sendEachForMulticast(message);
-        console.log(`${response.successCount} pesan berhasil dikirim, ${response.failureCount} gagal.`);
+        console.log(`${response.successCount} notifikasi terkirim ke latar belakang.`);
     } catch (error) {
-        console.error("Gagal mengirim notifikasi:", error);
+        console.error("Gagal mengirim:", error);
     }
 }
 
-console.log("Bot Notification Server berjalan. Menunggu data sensor...");
+console.log("Bot Notification Server Live & High Priority.");
