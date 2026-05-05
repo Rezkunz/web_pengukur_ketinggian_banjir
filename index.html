@@ -8,12 +8,12 @@
 
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com;
-        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com;
+        default-src 'self' https:;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com;
+        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebase.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: https:;
-        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app wss://*.firebasedatabase.app;
         frame-src https://*.firebaseapp.com https://*.firebasedatabase.app;
         object-src 'none';
     ">
@@ -383,7 +383,7 @@
     <script src="backend/monitoring.js?v=55"></script>
     <script src="backend/reports.js?v=55"></script>
     <script src="backend/members.js?v=55"></script>
-    <script src="backend/main.js?v=63"></script>
+    <script src="backend/main.js?v=64"></script>
 </body>
 
 </html>

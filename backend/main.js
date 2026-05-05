@@ -93,10 +93,27 @@ async function setupFCMToken(uid) {
     const vapidKey = 'Wm4URg04btDDfqM_iEkAxE_PnynyJLVCzcd5dhOoFO0';
     if (!('Notification' in window)) return;
     
-    // Pastikan Service Worker sudah SIAP sebelum mendaftarkan Token
     if ('serviceWorker' in navigator) {
         try {
-            await navigator.serviceWorker.ready; // TUNGGU DISINI
+            // Tunggu sampai Service Worker ada dan AKTIF
+            let reg = await navigator.serviceWorker.ready;
+            
+            // Jika belum aktif, tunggu event statechange
+            if (!reg.active) {
+                console.log("[SW] Menunggu Service Worker aktif...");
+                await new Promise((resolve) => {
+                    const sw = reg.installing || reg.waiting;
+                    if (sw) {
+                        sw.addEventListener('statechange', (e) => {
+                            if (e.target.state === 'activated') resolve();
+                        });
+                    } else {
+                        resolve();
+                    }
+                });
+            }
+
+            console.log("[SW] Service Worker sudah aktif. Melanjutkan registrasi token...");
             
             if (Notification.permission === 'default') {
                 const modal = document.getElementById('fcm-permission-modal');
@@ -117,7 +134,7 @@ async function setupFCMToken(uid) {
                 registerToken(uid, vapidKey);
             }
         } catch (e) {
-            console.error("Service Worker tidak siap:", e);
+            console.error("Gagal inisialisasi SW Notifikasi:", e);
         }
     }
 }
