@@ -837,3 +837,59 @@
 .btn-pwa-close:hover {
     color: #f1f5f9;
 }
+/* --- Notification Status Card --- */
+.notif-status-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.notif-status-card.success { border-left: 4px solid #10b981; }
+.notif-status-card.warning { border-left: 4px solid #f59e0b; }
+.notif-status-card.danger { border-left: 4px solid #ef4444; }
+
+.notif-status-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#notif-status-icon {
+    font-size: 1.2rem;
+}
+
+.notif-status-info h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.notif-status-info p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+#notif-status-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#notif-status-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}

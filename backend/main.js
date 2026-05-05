@@ -189,8 +189,13 @@ async function registerToken(uid, vapidKey) {
         const currentToken = await messaging.getToken({ vapidKey: vapidKey });
         if (currentToken) {
             if (database) {
-                await database.ref('users/' + uid + '/fcm_token').set(currentToken);
-                console.log('FCM Token berhasil disimpan ke database.');
+                // Gunakan hash pendek dari token sebagai key agar tidak konflik dan valid di Firebase
+                const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
+                await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(currentToken);
+                console.log('FCM Token (' + tokenKey + ') berhasil disimpan ke list tokens.');
+                
+                // Update UI status jika ada
+                updateNotificationStatusUI('granted');
             }
         } else {
             console.log('Gagal mendapatkan token FCM.');
@@ -199,7 +204,8 @@ async function registerToken(uid, vapidKey) {
         messaging.onTokenRefresh(async () => {
             const refreshedToken = await messaging.getToken({ vapidKey: vapidKey });
             if (refreshedToken && database) {
-                await database.ref('users/' + uid + '/fcm_token').set(refreshedToken);
+                const tokenKey = btoa(refreshedToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
+                await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(refreshedToken);
             }
         });
         
@@ -259,4 +265,75 @@ if (btnInstallPwa) {
 
 window.closePWAInstallBanner = function() {
     if (pwaBanner) pwaBanner.classList.remove('show');
+}
+
+// --- LOGIKA STATUS NOTIFIKASI DASHBOARD ---
+function updateNotificationStatusUI(permission) {
+    const statusBox = document.getElementById('notif-status-box');
+    const statusText = document.getElementById('notif-status-text');
+    const statusIcon = document.getElementById('notif-status-icon');
+    const statusBtn = document.getElementById('notif-status-btn');
+
+    if (!statusBox) return;
+
+    if (permission === 'granted') {
+        statusBox.className = 'notif-status-card success';
+        statusText.textContent = 'Notifikasi Aktif';
+        statusIcon.innerHTML = '🔔';
+        if (statusBtn) statusBtn.style.display = 'none';
+    } else if (permission === 'denied') {
+        statusBox.className = 'notif-status-card danger';
+        statusText.textContent = 'Notifikasi Diblokir';
+        statusIcon.innerHTML = '🚫';
+        if (statusBtn) {
+            statusBtn.style.display = 'block';
+            statusBtn.textContent = 'Cara Buka Blokir';
+            statusBtn.onclick = () => showNotifHelp('denied');
+        }
+    } else {
+        statusBox.className = 'notif-status-card warning';
+        statusText.textContent = 'Notifikasi Belum Aktif';
+        statusIcon.innerHTML = '⚠️';
+        if (statusBtn) {
+            statusBtn.style.display = 'block';
+            statusBtn.textContent = 'Aktifkan Sekarang';
+            statusBtn.onclick = () => {
+                if (window.setupFCMToken && auth.currentUser) {
+                    window.setupFCMToken(auth.currentUser.uid);
+                }
+            };
+        }
+    }
+}
+
+// Pantau perubahan izin secara berkala (karena browser tidak punya event listener untuk ini)
+setInterval(() => {
+    if ('Notification' in window) {
+        updateNotificationStatusUI(Notification.permission);
+    }
+}, 3000);
+
+function showNotifHelp(type) {
+    // Deteksi Device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isAndroid = /Android/.test(navigator.userAgent);
+    
+    let helpTitle = "Cara Mengaktifkan Notifikasi";
+    let helpDesc = "Ikuti langkah di bawah ini:";
+    
+    if (isIOS) {
+        helpTitle = "Panduan iPhone (iOS)";
+        helpDesc = "1. Klik tombol **Share** (kotak panah atas) di Safari.<br>2. Pilih **'Add to Home Screen'**.<br>3. Buka aplikasi SAFE dari layar utama.<br>4. Klik 'Izinkan' di dalam aplikasi.";
+    } else if (isAndroid && type === 'denied') {
+        helpTitle = "Buka Blokir Android";
+        helpDesc = "1. Klik ikon **Gembok/Settings** di baris alamat browser.<br>2. Pilih **Site Settings**.<br>3. Cari **Notifications** dan pilih **Allow/Izinkan**.<br>4. Refresh halaman.";
+    } else if (type === 'denied') {
+        helpTitle = "Buka Blokir Browser";
+        helpDesc = "1. Klik ikon Gembok di sebelah URL.<br>2. Ubah Notifikasi menjadi **Allow**.<br>3. Muat ulang halaman.";
+    }
+
+    // Gunakan Success Modal sebagai template bantuan sementara atau buat modal baru
+    if (typeof showSuccessModal === 'function') {
+        showSuccessModal(helpTitle, helpDesc.replace(/<br>/g, '\n'));
+    }
 }

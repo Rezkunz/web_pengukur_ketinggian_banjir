@@ -87,7 +87,16 @@ async function sendNotificationToAllUsers(title, body) {
         // Loop setiap user dan cari fcm_token
         Object.keys(users).forEach(uid => {
             const user = users[uid];
-            // Hanya kirim ke admin atau user yang memiliki token
+            // Kumpulkan semua token dari list fcm_tokens (Multi-Device)
+            if (user.fcm_tokens) {
+                Object.keys(user.fcm_tokens).forEach(tKey => {
+                    const token = user.fcm_tokens[tKey];
+                    if (token && typeof token === 'string') {
+                        tokens.push(token);
+                    }
+                });
+            }
+            // Fallback untuk token lama (Single Device)
             if (user.fcm_token) {
                 tokens.push(user.fcm_token);
             }
