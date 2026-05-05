@@ -291,6 +291,28 @@
         </div>
     </div>
 
+    <!-- FCM Permission Modal -->
+    <div class="custom-modal-overlay" id="fcm-permission-modal">
+        <div class="confirm-modal-box" style="box-shadow: 0 10px 0 #3b82f6, var(--shadow-soft);">
+            <button class="custom-modal-close" style="background: #f0f0f0; color: #999;" onclick="closeFCMPermissionModal()">✕</button>
+            <div class="confirm-icon-wrapper">
+                <div class="confirm-icon-glow" style="background: rgba(59, 130, 246, 0.2); animation: pulsateGlowBlue 2s infinite ease-out;"></div>
+                <div class="confirm-icon-circle" style="background: #3b82f6; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </div>
+            </div>
+            <h2 id="fcm-modal-title">Izinkan Notifikasi</h2>
+            <p id="fcm-modal-desc">Kami butuh izin Anda untuk mengirimkan peringatan jika ketinggian air mencapai batas bahaya.</p>
+            <div class="confirm-modal-actions">
+                <button class="btn-confirm-cancel" onclick="closeFCMPermissionModal()">Nanti Saja</button>
+                <button class="btn-confirm-delete" id="btn-fcm-allow" style="background: #3b82f6;">Izinkan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Success Modal -->
     <div class="custom-modal-overlay" id="success-modal" onclick="closeSuccessModal(event)">
         <div class="success-modal-box" onclick="event.stopPropagation()">

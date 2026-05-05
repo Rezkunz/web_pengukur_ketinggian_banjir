@@ -3,3 +3,7 @@
 node_modules/
 dist/
 .DS_Store
+
+# Server ignore
+server/node_modules/
+server/serviceAccountKey.json

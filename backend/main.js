@@ -60,6 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                      userData.role = 'admin';
                  }
             }
+
+            // -- PUSH NOTIFICATION (FCM) SETUP --
+            setupFCMToken(user.uid);
+
             if (userData.role === 'admin') {
                 if (!viewAdminDash.innerHTML) {
                     viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=53').then(r => r.text());
@@ -119,3 +123,91 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 });
+
+// Menutup FCM Modal
+window.closeFCMPermissionModal = function() {
+    const modal = document.getElementById('fcm-permission-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+// Fungsi untuk meminta izin dan menyimpan Token FCM ke Database
+async function setupFCMToken(uid) {
+    try {
+        if (!('Notification' in window)) {
+            console.warn("Browser ini tidak mendukung notifikasi.");
+            return;
+        }
+        
+        console.log("Status Izin Notifikasi saat ini:", Notification.permission);
+        
+        // PENTING: Ganti dengan Public VAPID Key dari Firebase Console Anda!
+        const vapidKey = "Wm4URg04btDDfqM_iEkAxE_PnynyJLVCzcd5dhOoFO0"; 
+        
+        // Jika belum ditanya, tampilkan Custom Modal cantik
+        if (Notification.permission === 'default') {
+            const fcmModal = document.getElementById('fcm-permission-modal');
+            const btnAllow = document.getElementById('btn-fcm-allow');
+            
+            if (fcmModal && btnAllow) {
+                // Tampilkan custom popup
+                fcmModal.classList.add('show'); 
+                
+                // Hapus listener lama jika ada (mencegah double trigger)
+                const newBtnAllow = btnAllow.cloneNode(true);
+                btnAllow.parentNode.replaceChild(newBtnAllow, btnAllow);
+                
+                newBtnAllow.addEventListener('click', async () => {
+                    closeFCMPermissionModal();
+                    // SEKARANG baru minta prompt asli browser
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        await registerToken(uid, vapidKey);
+                    } else {
+                        console.log("User menolak izin notifikasi di prompt browser.");
+                    }
+                });
+            } else {
+                console.error("Elemen modal FCM tidak ditemukan di HTML!");
+            }
+        } 
+        // Jika sudah diizinkan sebelumnya, langsung daftarkan
+        else if (Notification.permission === 'granted') {
+            await registerToken(uid, vapidKey);
+        }
+
+    } catch (error) {
+        console.error('Error saat mengatur FCM Token:', error);
+    }
+}
+
+async function registerToken(uid, vapidKey) {
+    console.log('Izin notifikasi FCM diberikan. Mengambil token...');
+    try {
+        const messaging = firebase.messaging();
+        const currentToken = await messaging.getToken({ vapidKey: vapidKey });
+        if (currentToken) {
+            if (database) {
+                await database.ref('users/' + uid + '/fcm_token').set(currentToken);
+                console.log('FCM Token berhasil disimpan ke database.');
+            }
+        } else {
+            console.log('Gagal mendapatkan token FCM.');
+        }
+
+        messaging.onTokenRefresh(async () => {
+            const refreshedToken = await messaging.getToken({ vapidKey: vapidKey });
+            if (refreshedToken && database) {
+                await database.ref('users/' + uid + '/fcm_token').set(refreshedToken);
+            }
+        });
+        
+        messaging.onMessage((payload) => {
+            console.log("Pesan masuk (Foreground): ", payload);
+            if(typeof sendNotification === 'function' && payload.notification) {
+                sendNotification(payload.notification.title, { body: payload.notification.body });
+            }
+        });
+    } catch(err) {
+        console.error("Gagal register token:", err);
+    }
+}
