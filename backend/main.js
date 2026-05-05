@@ -66,10 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (userData.role === 'admin') {
                 if (!viewAdminDash.innerHTML) {
-                    viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=53').then(r => r.text());
-                    viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=53').then(r => r.text());
-                    viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=53').then(r => r.text());
-                    viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=53').then(r => r.text());
+                    viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=54').then(r => r.text());
+                    viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=54').then(r => r.text());
+                    viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=54').then(r => r.text());
+                    viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=54').then(r => r.text());
                 }
                 adminNav.style.display = 'flex';
                 userNav.style.display = 'none';
@@ -85,10 +85,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startDataListener(); 
             } else {
                 if (!viewMonitoring.innerHTML) {
-                    viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=53').then(r => r.text());
-                    viewDarurat.innerHTML = await fetch('views/darurat.html?v=53').then(r => r.text());
-                    viewLapor.innerHTML = await fetch('views/lapor.html?v=53').then(r => r.text());
-                    viewSaran.innerHTML = await fetch('views/saran.html?v=53').then(r => r.text());
+                    viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=54').then(r => r.text());
+                    viewDarurat.innerHTML = await fetch('views/darurat.html?v=54').then(r => r.text());
+                    viewLapor.innerHTML = await fetch('views/lapor.html?v=54').then(r => r.text());
+                    viewSaran.innerHTML = await fetch('views/saran.html?v=54').then(r => r.text());
                 }
                 userNav.style.display = 'flex';
                 adminNav.style.display = 'none';
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.body.classList.remove('admin-view');
             document.body.classList.remove('user-view');
             if (!viewAuth.innerHTML) {
-                viewAuth.innerHTML = await fetch('views/auth.html?v=53').then(r => r.text());
+                viewAuth.innerHTML = await fetch('views/auth.html?v=54').then(r => r.text());
             }
             viewAuth.classList.add('active');
         }
