@@ -14,10 +14,15 @@ http.createServer((req, res) => {
 
 let serviceAccount;
 if (process.env.FIREBASE_PRIVATE_KEY) {
+    let pk = process.env.FIREBASE_PRIVATE_KEY.trim();
+    // Jika user tidak sengaja memasukkan tanda kutip di awal/akhir, hapus
+    if (pk.startsWith('"') && pk.endsWith('"')) {
+        pk = pk.substring(1, pk.length - 1);
+    }
     serviceAccount = {
         projectId: process.env.FIREBASE_PROJECT_ID || "safe-93f61",
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@safe-93f61.iam.gserviceaccount.com",
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        privateKey: pk.replace(/\\n/g, '\n')
     };
 } else if (process.env.FIREBASE_CREDENTIALS) {
     try {
