@@ -212,7 +212,6 @@ async function sendNotificationToAllUsers(title, body) {
                 await Promise.all(cleanupPromises);
                 console.log(`✅ Berhasil membersihkan ${cleanupPromises.length} token dari database.`);
             }
-        }
     } catch (error) {
         console.error("Gagal mengirim:", error);
     }
