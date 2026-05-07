@@ -22,14 +22,16 @@ async function openEditProfile() {
         document.getElementById('edit-email').value = user.email;
         let snap;
         try { snap = await database.ref('users/' + user.uid).once('value'); } catch(e){}
-        const data = snap && snap.exists() ? snap.val() : {nama: 'User', role: 'user'};
+        const data = snap && snap.exists() ? snap.val() : {};
+        const nama = data.nama || data.displayName || user.displayName || 'User';
+        const role = data.role || 'user';
         
-        document.getElementById('edit-nama').value = data.nama;
-        document.getElementById('edit-role-badge').textContent = data.role.toUpperCase() === 'ADMIN' ? 'Admin' : 'User';
-        document.getElementById('edit-avatar').textContent = data.nama.charAt(0).toUpperCase();
+        document.getElementById('edit-nama').value = nama;
+        document.getElementById('edit-role-badge').textContent = role.toUpperCase() === 'ADMIN' ? 'Admin' : 'User';
+        document.getElementById('edit-avatar').textContent = nama.charAt(0).toUpperCase();
         
         // Add specific color for admin role badge
-        if(data.role === 'admin') {
+        if(role === 'admin') {
             document.getElementById('edit-role-badge').style.background = '#e74c3c';
         }
     }
