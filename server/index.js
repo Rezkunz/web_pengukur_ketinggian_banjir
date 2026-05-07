@@ -77,14 +77,25 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
     }
 
     const now = Date.now();
-    const isStatusChanged = newStatus !== currentStatus;
+    
+    // Tentukan nilai numerik untuk status agar bisa dibandingkan
+    const statusLevels = { "Aman": 0, "Siaga 1": 1, "Siaga 2": 2 };
+    const newLevel = statusLevels[newStatus];
+    const currentLevel = statusLevels[currentStatus];
+
+    // Kirim notifikasi HANYA jika:
+    // 1. Status naik ke level yang lebih tinggi (misal Aman -> Siaga 1, atau Siaga 1 -> Siaga 2)
+    // 2. ATAU Status tetap tinggi tapi sudah lewat dari Cooldown (misal 5 menit masih Siaga 2)
+    const isLevelIncreased = newLevel > currentLevel;
+    const isStillDangerous = newLevel > 0;
     const isCooldownOver = (now - lastNotificationTime) > COOLDOWN_MS;
 
-    if (newStatus !== "Aman" && (isStatusChanged || isCooldownOver)) {
-        console.log(`[${new Date().toISOString()}] Mengirim notifikasi status: ${newStatus}`);
+    if (isStillDangerous && (isLevelIncreased || isCooldownOver)) {
+        console.log(`[${new Date().toISOString()}] Mengirim notifikasi: ${newStatus} (Level: ${newLevel})`);
         lastNotificationTime = now;
         await sendNotificationToAllUsers(title, body);
     }
+    
     currentStatus = newStatus;
 });
 
