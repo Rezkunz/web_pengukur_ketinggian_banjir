@@ -111,31 +111,36 @@ async function sendNotificationToAllUsers(title, body) {
             return;
         }
 
-        const tokenData = []; // Simpan objek {token, uid, tKey}
+        const tokenDataMap = new Map(); // Gunakan Map untuk deduplikasi token unik
         Object.keys(users).forEach(uid => {
             const user = users[uid];
             if (user.fcm_tokens) {
                 Object.keys(user.fcm_tokens).forEach(tKey => {
                     const token = user.fcm_tokens[tKey];
                     if (token && typeof token === 'string') {
-                        tokenData.push({ token, uid, tKey });
+                        // Jika token sudah ada, biarkan saja (deduplikasi)
+                        if (!tokenDataMap.has(token)) {
+                            tokenDataMap.set(token, { token, uid, tKey });
+                        }
                     }
                 });
             }
         });
 
-        if (tokenData.length === 0) {
+        if (tokenDataMap.size === 0) {
             console.log("Tidak ada token FCM aktif.");
             return;
         }
 
+        const tokenData = Array.from(tokenDataMap.values());
         const tokens = tokenData.map(td => td.token);
+        
         const uniqueNames = [...new Set(tokenData.map(td => {
             const u = users[td.uid];
             return u ? u.nama : 'Anonim';
         }))];
 
-        console.log(`Mengirim notifikasi ke ${tokens.length} token milik user: ${uniqueNames.join(', ')}`);
+        console.log(`Mengirim notifikasi ke ${tokens.length} perangkat unik milik user: ${uniqueNames.join(', ')}`);
 
         // Multicast Message: Data-only untuk Web Push agar selalu diproses SW
         const message = {
