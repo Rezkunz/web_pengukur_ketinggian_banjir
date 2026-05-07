@@ -112,6 +112,12 @@ async function sendNotificationToAllUsers(title, body) {
         }
 
         const tokens = tokenData.map(td => td.token);
+        const uniqueNames = [...new Set(tokenData.map(td => {
+            const u = users[td.uid];
+            return u ? u.nama : 'Anonim';
+        }))];
+
+        console.log(`Mengirim notifikasi ke ${tokens.length} token milik user: ${uniqueNames.join(', ')}`);
 
         // Multicast Message: Data-only untuk Web Push agar selalu diproses SW
         const message = {
