@@ -55,6 +55,8 @@ console.log("Menghubungkan ke Firebase Database...");
 const LEVEL_SIAGA1 = 200;
 const LEVEL_SIAGA2 = 300;
 let currentStatus = "Aman";
+let lastNotificationTime = 0;
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 Menit jeda minimal
 
 db.ref('sensor_data/water_level').on('value', async (snapshot) => {
     const waterLevel = snapshot.val();
@@ -74,8 +76,13 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
         body = `Ketinggian air naik ke ${waterLevel}cm. Harap waspada!`;
     }
 
-    if (newStatus !== "Aman" && newStatus !== currentStatus) {
-        console.log(`[${new Date().toISOString()}] Status berubah menjadi ${newStatus}. Mengirim notifikasi...`);
+    const now = Date.now();
+    const isStatusChanged = newStatus !== currentStatus;
+    const isCooldownOver = (now - lastNotificationTime) > COOLDOWN_MS;
+
+    if (newStatus !== "Aman" && (isStatusChanged || isCooldownOver)) {
+        console.log(`[${new Date().toISOString()}] Mengirim notifikasi status: ${newStatus}`);
+        lastNotificationTime = now;
         await sendNotificationToAllUsers(title, body);
     }
     currentStatus = newStatus;
