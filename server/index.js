@@ -12,10 +12,21 @@ http.createServer((req, res) => {
     console.log(`Dummy server listening on port ${PORT} (Required by Render)`);
 });
 
-// Inisialisasi Firebase Admin
 let serviceAccount;
-if (process.env.FIREBASE_CREDENTIALS) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+if (process.env.FIREBASE_PRIVATE_KEY) {
+    serviceAccount = {
+        projectId: process.env.FIREBASE_PROJECT_ID || "safe-93f61",
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@safe-93f61.iam.gserviceaccount.com",
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    };
+} else if (process.env.FIREBASE_CREDENTIALS) {
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+        if (serviceAccount.private_key) serviceAccount.privateKey = serviceAccount.private_key;
+    } catch (e) {
+        console.error("Gagal parse FIREBASE_CREDENTIALS:", e);
+        serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
+    }
 } else {
     const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
     if (!fs.existsSync(serviceAccountPath)) {
