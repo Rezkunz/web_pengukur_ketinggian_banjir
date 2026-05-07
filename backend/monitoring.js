@@ -434,14 +434,10 @@ function updateUI(waterLevel) {
 
     if (currentState !== lastNotifState) {
         if (currentState === 'SIAGA2') {
-            // SIAGA 2 = paling bahaya → wajib evakuasi ke pos terdekat
             const msg = `Ketinggian air mencapai ${Math.round(waterLevel)}cm.\n⚠️ PERINGATAN: Segera evakuasi dan pergi ke pos evakuasi terdekat!`;
-            sendNotification('🚨 SIAGA 2 — Bahaya!', { body: msg });
             showCustomModal('SIAGA2', 'SIAGA 2 — Bahaya!', msg);
         } else if (currentState === 'SIAGA1') {
-            // SIAGA 1 = waspada → himbauan evakuasi
             const msg = `Ketinggian air mencapai ${Math.round(waterLevel)}cm.\n🔔 HIMBAUAN: Masyarakat dihimbau untuk siap-siap evakuasi.`;
-            sendNotification('⚠️ SIAGA 1 — Waspada', { body: msg });
             showCustomModal('SIAGA1', 'SIAGA 1 — Waspada', msg);
         }
         lastNotifState = currentState;
