@@ -13,32 +13,32 @@ http.createServer((req, res) => {
 });
 
 let serviceAccount;
-if (process.env.FIREBASE_PRIVATE_KEY) {
-    let pk = process.env.FIREBASE_PRIVATE_KEY.trim();
-    // Jika user tidak sengaja memasukkan tanda kutip di awal/akhir, hapus
-    if (pk.startsWith('"') && pk.endsWith('"')) {
-        pk = pk.substring(1, pk.length - 1);
+if (process.env.FIREBASE_CONFIG_BASE64) {
+    try {
+        const decodedConfig = Buffer.from(process.env.FIREBASE_CONFIG_BASE64, 'base64').toString('utf8');
+        serviceAccount = JSON.parse(decodedConfig);
+        console.log("Kredensial berhasil dimuat via Base64.");
+    } catch (e) {
+        console.error("Gagal decode FIREBASE_CONFIG_BASE64:", e);
     }
+}
+
+if (!serviceAccount && process.env.FIREBASE_PRIVATE_KEY) {
+    let pk = process.env.FIREBASE_PRIVATE_KEY.trim();
+    if (pk.startsWith('"') && pk.endsWith('"')) pk = pk.substring(1, pk.length - 1);
     serviceAccount = {
         projectId: process.env.FIREBASE_PROJECT_ID || "safe-93f61",
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@safe-93f61.iam.gserviceaccount.com",
         privateKey: pk.replace(/\\n/g, '\n')
     };
-} else if (process.env.FIREBASE_CREDENTIALS) {
-    try {
-        serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
-        if (serviceAccount.private_key) serviceAccount.privateKey = serviceAccount.private_key;
-    } catch (e) {
-        console.error("Gagal parse FIREBASE_CREDENTIALS:", e);
-        serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
-    }
-} else {
+} else if (!serviceAccount) {
     const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
-    if (!fs.existsSync(serviceAccountPath)) {
+    if (fs.existsSync(serviceAccountPath)) {
+        serviceAccount = require(serviceAccountPath);
+    } else {
         console.error("ERROR: Kredensial tidak ditemukan!");
         process.exit(1);
     }
-    serviceAccount = require(serviceAccountPath);
 }
 
 admin.initializeApp({
