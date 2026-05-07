@@ -27,23 +27,26 @@ auth.onAuthStateChanged(async (user) => {
                 snapshot = await database.ref('users/' + user.uid).once('value');
             } catch(e) {}
         }
-        const userData = snapshot && snapshot.exists() ? snapshot.val() : { nama: 'User', role: 'user' };
+        const userData = snapshot && snapshot.exists() ? snapshot.val() : {};
+        const nama = userData.nama || userData.displayName || user.displayName || 'User';
         const headerName = document.getElementById('header-name');
         const headerAvatar = document.getElementById('header-avatar');
-        if (headerName) headerName.textContent = userData.nama;
-        if (headerAvatar) headerAvatar.textContent = userData.nama.charAt(0).toUpperCase();
+        if (headerName) headerName.textContent = nama;
+        if (headerAvatar) headerAvatar.textContent = nama.charAt(0).toUpperCase();
 
         ['user', 'admin'].forEach(role => {
             const sidebarAvatar = document.getElementById(`sidebar-avatar-${role}`);
             const sidebarName   = document.getElementById(`sidebar-name-${role}`);
-            if (sidebarAvatar) sidebarAvatar.textContent = userData.nama.charAt(0).toUpperCase();
-            if (sidebarName)   sidebarName.textContent   = userData.nama;
+            if (sidebarAvatar) sidebarAvatar.textContent = nama.charAt(0).toUpperCase();
+            if (sidebarName)   sidebarName.textContent   = nama;
         });
+
+        const role = userData.role || 'user';
 
         // Panggil pendaftaran token
         setupFCMToken(user.uid);
 
-        if (userData.role === 'admin') {
+        if (role === 'admin') {
             if (!viewAdminDash.innerHTML) {
                 viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=63').then(r => r.text());
                 viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=63').then(r => r.text());
