@@ -7,6 +7,14 @@
     "history": {
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
+    "laporan": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "saran": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
     "users": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
@@ -15,12 +23,7 @@
           ".write": "auth != null && auth.uid === $uid"
         }
       }
-    },
-    "reports": {
-      ".write": "auth != null"
-    },
-    "suggestions": {
-      ".write": "auth != null"
     }
   }
 }
+
