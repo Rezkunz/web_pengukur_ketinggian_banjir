@@ -249,24 +249,30 @@ async function fetchHistoryData(dateStr) {
 
 function saveHourlyData(value) {
     if (!database || value === null || value === undefined) return;
-    if (isSensorOffline) return; // Jangan simpan data jam jika sensor offline
+    if (isSensorOffline) return; 
 
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const hour = now.getHours();
+    const user = auth.currentUser;
+    if (!user) return;
 
-    // Check if this hour is already saved to avoid redundant writes
-    const path = `history/${dateStr}/${hour}`;
-    database.ref(path).once('value', (snap) => {
-        if (!snap.exists()) {
-            database.ref(path).set(Math.round(value));
-            
-            // Clean up old history (> 30 days)
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 31);
-            const oldDateStr = thirtyDaysAgo.toISOString().split('T')[0];
-            database.ref(`history/${oldDateStr}`).remove();
-        }
+    // Hanya admin yang bisa menyimpan data history ke database
+    database.ref('users/' + user.uid + '/role').once('value').then(snap => {
+        if (snap.val() !== 'admin') return;
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const hour = now.getHours();
+
+        const path = `history/${dateStr}/${hour}`;
+        database.ref(path).once('value', (s) => {
+            if (!s.exists()) {
+                database.ref(path).set(Math.round(value));
+                
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 31);
+                const oldDateStr = thirtyDaysAgo.toISOString().split('T')[0];
+                database.ref(`history/${oldDateStr}`).remove();
+            }
+        });
     });
 }
 
@@ -310,22 +316,28 @@ function startChartHistoryListener() {
 // Save Chart Point (Max 1x per 15 minutes)
 function saveChartPoint(value) {
     if (!database || value === null || value === undefined) return;
-    if (isSensorOffline) return; // Jangan simpan jika sensor offline
+    if (isSensorOffline) return;
 
-    const historyRef = database.ref(CHART_HISTORY_PATH);
-    const now = Date.now();
+    const user = auth.currentUser;
+    if (!user) return;
 
-    // Simpan titik baru dengan timestamp sebagai key
-    historyRef.child(now.toString()).set(Math.round(value))
-        .then(() => historyRef.orderByKey().once('value'))
-        .then((snap) => {
-            const keys = [];
-            snap.forEach(child => keys.push(child.key));
-            // Hapus entri lama jika melebihi batas CHART_MAX_POINTS
-            const toDelete = keys.slice(0, Math.max(0, keys.length - CHART_MAX_POINTS));
-            return Promise.all(toDelete.map(key => historyRef.child(key).remove()));
-        })
-        .catch(err => console.warn('Gagal menyimpan riwayat grafik:', err));
+    // Hanya admin yang bisa menyimpan titik grafik
+    database.ref('users/' + user.uid + '/role').once('value').then(snap => {
+        if (snap.val() !== 'admin') return;
+
+        const historyRef = database.ref(CHART_HISTORY_PATH);
+        const now = Date.now();
+
+        historyRef.child(now.toString()).set(Math.round(value))
+            .then(() => historyRef.orderByKey().once('value'))
+            .then((snap) => {
+                const keys = [];
+                snap.forEach(child => keys.push(child.key));
+                const toDelete = keys.slice(0, Math.max(0, keys.length - CHART_MAX_POINTS));
+                return Promise.all(toDelete.map(key => historyRef.child(key).remove()));
+            })
+            .catch(err => console.warn('Gagal menyimpan riwayat grafik:', err));
+    });
 }
 
 function maybeSaveChartPoint(value) {

@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: flood-monitor-bot
+    env: node
+    region: singapore
+    buildCommand: npm install
+    startCommand: node index.js
+    rootDir: server
+    autoDeploy: true

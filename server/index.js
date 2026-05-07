@@ -4,7 +4,7 @@ const path = require('path');
 const http = require('http'); // Tambahan untuk Render
 
 // --- DUMMY HTTP SERVER UNTUK RENDER ---
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001; // Ubah ke 3001 agar tidak bentrok dengan web server (3000)
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot Notification Server is Running OK!');
@@ -27,7 +27,8 @@ if (process.env.FIREBASE_CREDENTIALS) {
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app" 
+    databaseURL: "https://safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "safe-93f61"
 });
 
 const db = admin.database();
@@ -68,58 +69,95 @@ async function sendNotificationToAllUsers(title, body) {
     try {
         const usersSnap = await db.ref('users').once('value');
         const users = usersSnap.val();
-        if (!users) return;
+        
+        console.log(`Debug: Ditemukan ${users ? Object.keys(users).length : 0} user di database.`);
 
-        const tokens = [];
+        if (!users) {
+            console.log("Database 'users' kosong.");
+            return;
+        }
+
+        const tokenData = []; // Simpan objek {token, uid, tKey}
         Object.keys(users).forEach(uid => {
             const user = users[uid];
             if (user.fcm_tokens) {
                 Object.keys(user.fcm_tokens).forEach(tKey => {
                     const token = user.fcm_tokens[tKey];
-                    if (token && typeof token === 'string') tokens.push(token);
+                    if (token && typeof token === 'string') {
+                        tokenData.push({ token, uid, tKey });
+                    }
                 });
             }
         });
 
-        if (tokens.length === 0) {
+        if (tokenData.length === 0) {
             console.log("Tidak ada token FCM aktif.");
             return;
         }
 
-        // Multicast Message dengan Prioritas Tinggi
+        const tokens = tokenData.map(td => td.token);
+
+        // Multicast Message: Data-only untuk Web Push agar selalu diproses SW
         const message = {
-            notification: { title: title, body: body },
             data: {
                 title: title,
                 body: body,
-                click_action: "FLUTTER_NOTIFICATION_CLICK" // Sering membantu untuk background
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
             },
             android: {
                 priority: "high",
                 notification: {
-                    sound: "default",
-                    clickAction: "TOP_STORY_ACTIVITY"
+                    title: title,
+                    body: body,
+                    sound: "default"
                 }
             },
             webpush: {
                 headers: {
                     Urgency: "high"
                 },
-                notification: {
+                data: {
                     title: title,
-                    body: body,
-                    icon: "https://img.icons8.com/color/192/siren.png",
-                    badge: "https://img.icons8.com/color/192/siren.png",
-                    vibrate: [500, 110, 500, 110, 450, 110, 200, 110],
-                    requireInteraction: true,
-                    tag: 'flood-alert'
+                    body: body
+                },
+                fcm_options: {
+                    link: "/"
                 }
             },
             tokens: tokens
         };
 
         const response = await messaging.sendEachForMulticast(message);
-        console.log(`${response.successCount} notifikasi terkirim ke latar belakang.`);
+        console.log(`${response.successCount} notifikasi berhasil terkirim.`);
+        
+        if (response.failureCount > 0) {
+            console.log(`${response.failureCount} notifikasi gagal. Membersihkan token basi...`);
+            
+            const cleanupPromises = [];
+            response.responses.forEach((resp, idx) => {
+                if (!resp.success) {
+                    const errorCode = resp.error.code;
+                    const errorMsg = resp.error.message;
+                    const failedTokenInfo = tokenData[idx];
+
+                    console.error(`Gagal [${failedTokenInfo.uid}]: ${errorMsg}`);
+
+                    // Hapus jika token sudah tidak terdaftar (unregistered)
+                    if (errorCode === 'messaging/registration-token-not-registered' || 
+                        errorMsg.includes('unregistered')) {
+                        console.log(`🗑️ Menghapus token basi: ${failedTokenInfo.tKey} milik ${failedTokenInfo.uid}`);
+                        cleanupPromises.push(
+                            db.ref(`users/${failedTokenInfo.uid}/fcm_tokens/${failedTokenInfo.tKey}`).remove()
+                        );
+                    }
+                }
+            });
+            
+            if (cleanupPromises.length > 0) {
+                await Promise.all(cleanupPromises);
+                console.log(`✅ Berhasil membersihkan ${cleanupPromises.length} token dari database.`);
+            }
+        }
     } catch (error) {
         console.error("Gagal mengirim:", error);
     }

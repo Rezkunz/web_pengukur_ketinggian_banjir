@@ -8,16 +8,48 @@ const firebaseConfig = {
     storageBucket: "safe-93f61.firebasestorage.app",
     messagingSenderId: "323210012333",
     appId: "1:323210012333:web:3704c556377b5a45600824",
-    measurementId: "G-HSWSEVKJD1"
+    measurementId: "G-HSWSEVKJD1",
+    databaseURL: "https://safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+// SW Lifecycle: Force activation
+self.addEventListener('install', (event) => {
+    console.log('[SW] Melakukan Instalasi...');
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    console.log('[SW] Aktivasi Berhasil. Mengambil kendali klien...');
+    event.waitUntil(clients.claim());
+});
+
 // Handle Background Messages
 messaging.onBackgroundMessage((payload) => {
     console.log('[SW] Pesan Latar Belakang Diterima:', payload);
-    
+    return showNotification(payload);
+});
+
+// Manual Push Listener (Fail-safe)
+self.addEventListener('push', (event) => {
+    console.log('[SW] Push Event Diterima:', event);
+    if (!event.data) return;
+
+    try {
+        const data = event.data.json();
+        console.log('[SW] Push Data (JSON):', data);
+        // Jika payload bukan dari SDK (tidak memicu onBackgroundMessage)
+        if (!data.notification && data.data) {
+            event.waitUntil(showNotification(data));
+        }
+    } catch (e) {
+        console.warn('[SW] Push data bukan JSON atau gagal diproses:', e);
+    }
+});
+
+function showNotification(payload) {
     // Ambil data dari payload notification ATAU payload data
     const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || '🚨 PERINGATAN BANJIR';
     const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Level air dalam kondisi bahaya!';
@@ -39,7 +71,7 @@ messaging.onBackgroundMessage((payload) => {
     };
 
     return self.registration.showNotification(title, notificationOptions);
-});
+}
 
 // Handle Notification Click
 self.addEventListener('notificationclick', (event) => {

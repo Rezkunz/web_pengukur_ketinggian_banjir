@@ -142,24 +142,41 @@ async function setupFCMToken(uid) {
 async function registerToken(uid, vapidKey, registration) {
     try {
         const messaging = firebase.messaging();
-        // Tunggu sebentar agar browser siap melakukan subscribe
-        setTimeout(async () => {
-            try {
-                const currentToken = await messaging.getToken({ 
-                    vapidKey: vapidKey,
-                    serviceWorkerRegistration: registration 
-                });
-                if (currentToken) {
-                    if (database) {
-                        const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
-                        await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(currentToken);
-                        console.log('FCM Token (' + tokenKey + ') berhasil didaftarkan.');
-                    }
+        
+        // Pastikan ada Service Worker yang AKTIF
+        if (!registration.active) {
+            console.log("[SW] Menunggu Service Worker menjadi aktif...");
+            await new Promise((resolve) => {
+                const sw = registration.installing || registration.waiting;
+                if (sw) {
+                    sw.addEventListener('statechange', (e) => {
+                        if (e.target.state === 'activated') resolve();
+                    });
+                } else {
+                    resolve();
                 }
-            } catch (err) {
-                console.error("Gagal mendapatkan token:", err);
+            });
+        }
+
+        // Tunggu sebentar lagi untuk sinkronisasi browser
+        await new Promise(r => setTimeout(r, 1000));
+
+        try {
+            const currentToken = await messaging.getToken({ 
+                vapidKey: vapidKey,
+                serviceWorkerRegistration: registration 
+            });
+            
+            if (currentToken) {
+                if (database) {
+                    const tokenKey = btoa(currentToken).substring(0, 32).replace(/[\/\+\=]/g, '_');
+                    await database.ref('users/' + uid + '/fcm_tokens/' + tokenKey).set(currentToken);
+                    console.log('FCM Token (' + tokenKey + ') berhasil didaftarkan.');
+                }
             }
-        }, 1500);
+        } catch (err) {
+            console.error("Gagal mendapatkan token:", err);
+        }
     } catch(err) {
         console.error("Gagal inisialisasi messaging:", err);
     }

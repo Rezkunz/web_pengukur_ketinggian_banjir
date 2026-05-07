@@ -6,4 +6,4 @@ dist/
 
 # Server ignore
 server/node_modules/
-server/serviceAccountKey.json
+# server/serviceAccountKey.json
