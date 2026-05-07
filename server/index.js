@@ -175,16 +175,16 @@ async function sendNotificationToAllUsers(title, body) {
         const response = await messaging.sendEachForMulticast(message);
         console.log(`${response.successCount} notifikasi berhasil terkirim.`);
         
-        if (response.failureCount > 0) {
-            console.log(`${response.failureCount} notifikasi gagal. Membersihkan token basi...`);
-            
             const cleanupPromises = [];
+            const processedTokens = new Set(); // Untuk deteksi duplikat di pengiriman ini
+            
             response.responses.forEach((resp, idx) => {
+                const failedTokenInfo = tokenData[idx];
+                const tokenString = failedTokenInfo.token;
+
                 if (!resp.success) {
                     const errorCode = resp.error.code;
                     const errorMsg = resp.error.message;
-                    const failedTokenInfo = tokenData[idx];
-
                     console.error(`Gagal [${failedTokenInfo.uid}]: ${errorMsg}`);
 
                     // Hapus jika token sudah tidak terdaftar (unregistered)
@@ -195,6 +195,16 @@ async function sendNotificationToAllUsers(title, body) {
                             db.ref(`users/${failedTokenInfo.uid}/fcm_tokens/${failedTokenInfo.tKey}`).remove()
                         );
                     }
+                } else {
+                    // JIKA SUKSES, tapi token ini sudah kita kirim sebelumnya di loop ini (Duplikat)
+                    // maka hapus entri duplikatnya di database agar bersih
+                    if (processedTokens.has(tokenString)) {
+                        console.log(`🧹 Membersihkan entri duplikat database: ${failedTokenInfo.tKey}`);
+                        cleanupPromises.push(
+                            db.ref(`users/${failedTokenInfo.uid}/fcm_tokens/${failedTokenInfo.tKey}`).remove()
+                        );
+                    }
+                    processedTokens.add(tokenString);
                 }
             });
             
