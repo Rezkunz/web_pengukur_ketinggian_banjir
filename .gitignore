@@ -4,6 +4,7 @@ node_modules/
 dist/
 .DS_Store
 
-# Server ignore
+# Server ignore - Credentials (JANGAN PERNAH COMMIT KE GITHUB)
 server/node_modules/
-# server/serviceAccountKey.json
+server/serviceAccountKey.json
+server/safe-93f61-*.json
