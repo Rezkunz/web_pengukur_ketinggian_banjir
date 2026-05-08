@@ -72,50 +72,84 @@ let currentStatus = "Aman";
 let lastNotificationTime = 0;
 const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 Jam jeda minimal untuk pengingat (Reminder)
 
-db.ref('sensor_data/water_level').on('value', async (snapshot) => {
-    const waterLevel = snapshot.val();
-    if (waterLevel === null) return;
+// Fungsi utama untuk inisialisasi dan monitoring
+async function startNotificationBot() {
+    console.log("Mengambil status notifikasi terakhir dari database...");
+    
+    try {
+        const lastNotifSnap = await db.ref('sensor_data/last_notification').once('value');
+        const lastNotif = lastNotifSnap.val();
 
-    let newStatus = "Aman";
-    let title = "";
-    let body = "";
-
-    if (waterLevel >= LEVEL_SIAGA2) {
-        newStatus = "Siaga 2";
-        title = "🚨 SIAGA 2 — Bahaya!";
-        body = `Ketinggian air mencapai ${waterLevel}cm. Segera evakuasi!`;
-    } else if (waterLevel >= LEVEL_SIAGA1) {
-        newStatus = "Siaga 1";
-        title = "⚠️ SIAGA 1 — Waspada!";
-        body = `Ketinggian air naik ke ${waterLevel}cm. Harap waspada!`;
-    } else {
-        newStatus = "Aman";
-        title = "✅ STATUS AMAN";
-        body = `Ketinggian air sudah kembali normal (${waterLevel}cm). Tetap pantau kondisi sekitar.`;
+        if (lastNotif) {
+            currentStatus = lastNotif.status || "Aman";
+            lastNotificationTime = lastNotif.timestamp || 0;
+            console.log(`[Inisialisasi] Status Terakhir: ${currentStatus}, Terakhir Dikirim: ${new Date(lastNotificationTime).toLocaleString()}`);
+        }
+    } catch (err) {
+        console.error("Gagal mengambil status awal:", err.message);
     }
 
-    const now = Date.now();
-    
-    // Tentukan nilai numerik untuk status agar bisa dibandingkan
-    const statusLevels = { "Aman": 0, "Siaga 1": 1, "Siaga 2": 2 };
-    const newLevel = statusLevels[newStatus];
-    const currentLevel = statusLevels[currentStatus];
+    db.ref('sensor_data/water_level').on('value', async (snapshot) => {
+        const waterLevel = snapshot.val();
+        if (waterLevel === null) return;
 
-    // Kirim notifikasi HANYA jika:
-    // 1. Status berubah (Aman -> Siaga 1, Siaga 1 -> Siaga 2, atau sebaliknya)
-    // 2. ATAU Status tetap tinggi tapi sudah lewat dari Cooldown (Reminder setiap 2 jam)
-    const isStatusChanged = newStatus !== currentStatus;
-    const isStillDangerous = newLevel > 0;
-    const isCooldownOver = (now - lastNotificationTime) > COOLDOWN_MS;
+        let newStatus = "Aman";
+        let title = "";
+        let body = "";
 
-    if (isStatusChanged || (isStillDangerous && isCooldownOver)) {
-        console.log(`[${new Date().toISOString()}] Mengirim notifikasi: ${newStatus} (Level: ${newLevel})`);
-        lastNotificationTime = now;
-        await sendNotificationToAllUsers(title, body);
-    }
-    
-    currentStatus = newStatus;
-});
+        if (waterLevel >= LEVEL_SIAGA2) {
+            newStatus = "Siaga 2";
+            title = "🚨 SIAGA 2 — Bahaya!";
+            body = `Ketinggian air mencapai ${waterLevel}cm. Segera evakuasi!`;
+        } else if (waterLevel >= LEVEL_SIAGA1) {
+            newStatus = "Siaga 1";
+            title = "⚠️ SIAGA 1 — Waspada!";
+            body = `Ketinggian air naik ke ${waterLevel}cm. Harap waspada!`;
+        } else {
+            newStatus = "Aman";
+            title = "✅ STATUS AMAN";
+            body = `Ketinggian air sudah kembali normal (${waterLevel}cm). Tetap pantau kondisi sekitar.`;
+        }
+
+        const now = Date.now();
+        
+        // Tentukan nilai numerik untuk status agar bisa dibandingkan
+        const statusLevels = { "Aman": 0, "Siaga 1": 1, "Siaga 2": 2 };
+        const newLevel = statusLevels[newStatus];
+        const currentLevel = statusLevels[currentStatus];
+
+        // Kirim notifikasi HANYA jika:
+        // 1. Status berubah (Aman -> Siaga 1, dsb)
+        // 2. ATAU Status tetap tinggi tapi sudah lewat dari Cooldown (Reminder setiap 2 jam)
+        const isStatusChanged = newStatus !== currentStatus;
+        const isStillDangerous = newLevel > 0;
+        const isCooldownOver = (now - lastNotificationTime) > COOLDOWN_MS;
+
+        if (isStatusChanged || (isStillDangerous && isCooldownOver)) {
+            console.log(`[${new Date().toISOString()}] Mengirim notifikasi: ${newStatus} (Alasan: ${isStatusChanged ? 'Perubahan Status' : 'Cooldown Reminder'})`);
+            
+            // Simpan status baru SEBELUM kirim agar tidak terjadi race condition saat pengiriman lama
+            currentStatus = newStatus;
+            lastNotificationTime = now;
+
+            try {
+                // Persistensi ke Database agar sinkron saat restart
+                await db.ref('sensor_data/last_notification').set({
+                    status: newStatus,
+                    timestamp: now,
+                    water_level: waterLevel
+                });
+                
+                await sendNotificationToAllUsers(title, body);
+            } catch (err) {
+                console.error("Gagal memperbarui status di DB atau kirim notif:", err.message);
+            }
+        }
+    });
+}
+
+// Jalankan Bot
+startNotificationBot();
 
 async function sendNotificationToAllUsers(title, body) {
     try {
@@ -184,7 +218,7 @@ async function sendNotificationToAllUsers(title, body) {
                     body: body
                 },
                 fcm_options: {
-                    link: "/"
+                    link: "https://www.safetelu.my.id/"
                 }
             },
             tokens: tokens
