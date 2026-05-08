@@ -13,17 +13,18 @@ exports.sendFloodNotification = functions.database.ref('/sensor_data/water_level
 
         // Ambang batas (Thresholds)
         const THRESHOLD_SIAGA2 = 300;
-        const THRESHOLD_SIAGA1 = 450;
+        const THRESHOLD_SIAGA1 = 200;
 
         let title = "";
         let body = "";
 
         // Logika penentuan status (Hanya kirim jika naik level)
-        if (afterValue >= THRESHOLD_SIAGA1 && beforeValue < THRESHOLD_SIAGA1) {
-            title = "🚨 BAHAYA: STATUS SIAGA 1!";
+        // Cek Siaga 2 (Bahaya) dulu karena threshold lebih tinggi
+        if (afterValue >= THRESHOLD_SIAGA2 && beforeValue < THRESHOLD_SIAGA2) {
+            title = "🚨 BAHAYA: STATUS SIAGA 2!";
             body = `Ketinggian air mencapai ${afterValue}cm. Segera evakuasi diri!`;
-        } else if (afterValue >= THRESHOLD_SIAGA2 && beforeValue < THRESHOLD_SIAGA2) {
-            title = "⚠️ PERINGATAN: STATUS SIAGA 2!";
+        } else if (afterValue >= THRESHOLD_SIAGA1 && beforeValue < THRESHOLD_SIAGA1) {
+            title = "⚠️ PERINGATAN: STATUS SIAGA 1!";
             body = `Ketinggian air naik ke ${afterValue}cm. Waspada potensi banjir.`;
         }
 
