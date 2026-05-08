@@ -70,7 +70,7 @@ const LEVEL_SIAGA1 = 200;
 const LEVEL_SIAGA2 = 300;
 let currentStatus = "Aman";
 let lastNotificationTime = 0;
-const COOLDOWN_MS = 1 * 60 * 1000; // 1 Menit jeda minimal
+const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 Jam jeda minimal untuk pengingat (Reminder)
 
 db.ref('sensor_data/water_level').on('value', async (snapshot) => {
     const waterLevel = snapshot.val();
@@ -88,6 +88,10 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
         newStatus = "Siaga 1";
         title = "⚠️ SIAGA 1 — Waspada!";
         body = `Ketinggian air naik ke ${waterLevel}cm. Harap waspada!`;
+    } else {
+        newStatus = "Aman";
+        title = "✅ STATUS AMAN";
+        body = `Ketinggian air sudah kembali normal (${waterLevel}cm). Tetap pantau kondisi sekitar.`;
     }
 
     const now = Date.now();
@@ -98,13 +102,13 @@ db.ref('sensor_data/water_level').on('value', async (snapshot) => {
     const currentLevel = statusLevels[currentStatus];
 
     // Kirim notifikasi HANYA jika:
-    // 1. Status naik ke level yang lebih tinggi (misal Aman -> Siaga 1, atau Siaga 1 -> Siaga 2)
-    // 2. ATAU Status tetap tinggi tapi sudah lewat dari Cooldown (misal 5 menit masih Siaga 2)
-    const isLevelIncreased = newLevel > currentLevel;
+    // 1. Status berubah (Aman -> Siaga 1, Siaga 1 -> Siaga 2, atau sebaliknya)
+    // 2. ATAU Status tetap tinggi tapi sudah lewat dari Cooldown (Reminder setiap 2 jam)
+    const isStatusChanged = newStatus !== currentStatus;
     const isStillDangerous = newLevel > 0;
     const isCooldownOver = (now - lastNotificationTime) > COOLDOWN_MS;
 
-    if (isStillDangerous && (isLevelIncreased || isCooldownOver)) {
+    if (isStatusChanged || (isStillDangerous && isCooldownOver)) {
         console.log(`[${new Date().toISOString()}] Mengirim notifikasi: ${newStatus} (Level: ${newLevel})`);
         lastNotificationTime = now;
         await sendNotificationToAllUsers(title, body);
