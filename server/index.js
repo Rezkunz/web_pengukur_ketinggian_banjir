@@ -5,11 +5,25 @@ const http = require('http'); // Tambahan untuk Render
 
 // --- DUMMY HTTP SERVER UNTUK RENDER ---
 const PORT = process.env.PORT || 3001; // Ubah ke 3001 agar tidak bentrok dengan web server (3000)
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot Notification Server is Running OK!');
 }).listen(PORT, () => {
     console.log(`Dummy server listening on port ${PORT} (Required by Render)`);
+    
+    // Mulai Self-Ping agar tidak tertidur (PENTING untuk Render Free Tier)
+    if (!RENDER_URL.includes('localhost')) {
+        setInterval(() => {
+            console.log(`[Keep-Alive] Pinging self at ${RENDER_URL}...`);
+            http.get(RENDER_URL, (res) => {
+                console.log(`[Keep-Alive] Respon: ${res.statusCode}`);
+            }).on('error', (err) => {
+                console.error(`[Keep-Alive] Error: ${err.message}`);
+            });
+        }, 10 * 60 * 1000); // Ping setiap 10 menit
+    }
 });
 
 let serviceAccount;
