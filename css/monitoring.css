@@ -15,11 +15,11 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
-    gap: 40px;
-    padding: 40px !important;
-    flex-wrap: wrap;
-    min-height: 350px;
+    justify-content: center;
+    gap: 20px;
+    padding: 25px 15px !important;
+    flex-wrap: nowrap;
+    min-height: 300px;
 }
 
 /* ══ GLASS TANK SYSTEM ══ */
@@ -33,16 +33,17 @@
 }
 
 .water-tank-glass {
-    width: 110px;
-    height: 260px;
+    width: 90px;
+    height: 230px;
     background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
     border: 3px solid rgba(255,255,255,0.9);
-    border-radius: 55px;
+    border-radius: 45px;
     position: relative;
     overflow: hidden;
     box-shadow: 
         inset 0 0 25px rgba(255,255,255,0.5),
         0 15px 35px rgba(0,0,0,0.1);
+    flex-shrink: 0;
 }
 
 .water-tank-inner {
@@ -266,7 +267,7 @@
 }
 
 #current-level {
-    font-size: 3.5rem;
+    font-size: 3.2rem;
     font-weight: 700;
     color: var(--brand-dark);
     line-height: 1;
@@ -374,8 +375,8 @@
    RESPONSIVE - TABLET (768px+)
    ===================================================== */
 @media (min-width: 768px) {
-    .water-container { gap: 40px; }
-    .water-tank { width: 110px; height: 260px; }
+    .water-container { gap: 40px; padding: 40px !important; justify-content: flex-start; }
+    .water-tank-glass { width: 110px; height: 260px; border-radius: 55px; }
     #current-level { font-size: 4.5rem; }
     .chart-container { height: 260px; }
     #view-monitoring > * { max-width: 100%; }
@@ -390,7 +391,7 @@
    ===================================================== */
 @media (min-width: 1024px) {
     .water-container { gap: 48px; }
-    .water-tank { width: 120px; height: 280px; border-radius: 60px; }
+    .water-tank-glass { width: 120px; height: 280px; border-radius: 60px; }
     #current-level { font-size: 5rem; }
     .chart-container { height: 300px; }
     .alert-icon { width: 60px; height: 60px; }
