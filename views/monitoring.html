@@ -17,30 +17,33 @@
 
                 <!-- Water Visualization -->
                 <section class="water-container glass-panel">
-                    <div class="water-tank-wrapper">
-                        <div class="water-tank" id="water-tank">
-                            <div class="water-fill" id="water-fill">
-                                <!-- SVG Wave lebih smooth -->
-                                <div class="wave-container">
-                                    <svg class="wave-svg" viewBox="0 0 1200 22" preserveAspectRatio="none">
-                                        <path d="M0,11 C150,22 350,0 600,11 C850,22 1050,0 1200,11 L1200,22 L0,22 Z"/>
-                                    </svg>
-                                    <svg class="wave-svg-2" viewBox="0 0 1200 22" preserveAspectRatio="none" style="fill:inherit;">
-                                        <path d="M0,11 C200,0 400,22 600,11 C800,0 1000,22 1200,11 L1200,22 L0,22 Z"/>
-                                    </svg>
-                                </div>
-                                <!-- Ripple effect -->
-                                <div class="water-ripple"></div>
-                                <div class="water-ripple"></div>
-                                <div class="water-ripple"></div>
-                                <!-- Bubbles -->
-                                <div class="bubble" style="width:6px;height:6px;left:25%;--dur:3.2s;--delay:0s;"></div>
-                                <div class="bubble" style="width:4px;height:4px;left:60%;--dur:2.5s;--delay:1s;"></div>
-                                <div class="bubble" style="width:5px;height:5px;left:45%;--dur:4s;--delay:0.5s;"></div>
-                                <div class="bubble" style="width:3px;height:3px;left:75%;--dur:3s;--delay:1.8s;"></div>
-                            </div>
+        <!-- Sisi Kiri: Tabung Air Premium -->
+        <div class="water-tank-container">
+            <div class="water-tank-glass">
+                <div class="water-tank-inner" id="water-tank">
+                    <div class="water-fill" id="water-fill">
+                        <!-- Animasi Gelombang -->
+                        <div class="wave-wrap">
+                            <svg class="wave-svg" viewBox="0 0 1200 24" preserveAspectRatio="none">
+                                <path d="M0,12 C150,24 350,0 600,12 C850,24 1050,0 1200,12 L1200,24 L0,24 Z"/>
+                            </svg>
+                            <svg class="wave-svg-overlay" viewBox="0 0 1200 24" preserveAspectRatio="none">
+                                <path d="M0,12 C200,0 400,24 600,12 C800,0 1000,24 1200,12 L1200,24 L0,24 Z"/>
+                            </svg>
+                        </div>
+                        <!-- Animasi Gelembung -->
+                        <div class="bubbles-container">
+                            <div class="bubble-item"></div>
+                            <div class="bubble-item"></div>
+                            <div class="bubble-item"></div>
+                            <div class="bubble-item"></div>
                         </div>
                     </div>
+                </div>
+                <!-- Efek Kilap Kaca -->
+                <div class="tank-reflection"></div>
+            </div>
+        </div>
 
                     <div class="level-info">
                         <h3>Tinggi Air</h3>

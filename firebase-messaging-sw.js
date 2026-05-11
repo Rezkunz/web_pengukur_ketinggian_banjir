@@ -32,22 +32,8 @@ messaging.onBackgroundMessage((payload) => {
     return showNotification(payload);
 });
 
-// Manual Push Listener (Fail-safe)
-self.addEventListener('push', (event) => {
-    console.log('[SW] Push Event Diterima:', event);
-    if (!event.data) return;
+// Manual push listener removed to prevent duplicate notifications with onBackgroundMessage
 
-    try {
-        const data = event.data.json();
-        console.log('[SW] Push Data (JSON):', data);
-        // Jika payload bukan dari SDK (tidak memicu onBackgroundMessage)
-        if (!data.notification && data.data) {
-            event.waitUntil(showNotification(data));
-        }
-    } catch (e) {
-        console.warn('[SW] Push data bukan JSON atau gagal diproses:', e);
-    }
-});
 
 function showNotification(payload) {
     // Ambil data dari payload notification ATAU payload data

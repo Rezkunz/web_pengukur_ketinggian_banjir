@@ -404,8 +404,8 @@ function updateUI(waterLevel) {
 
     // Cek dari level tertinggi ke bawah
     if (waterLevel >= THRESHOLDS.SIAGA2) {
-        // ≥ 300cm (3m) → SIAGA 2 (Bahaya, evakuasi)
-        if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-siaga2)';
+        // ≥ 300cm (3m) → SIAGA 2 (Bahaya) → Merah
+        if (waterFillEl) waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)');
         if (alertPanelEl) alertPanelEl.classList.add('status-siaga2');
         if (alertMessageEl) {
             alertMessageEl.textContent = 'SIAGA 2 (Bahaya!)';
@@ -414,8 +414,8 @@ function updateUI(waterLevel) {
         if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 2'; adminStatusAir.style.color = 'var(--status-siaga2)'; }
         currentState = 'SIAGA2';
     } else if (waterLevel >= THRESHOLDS.SIAGA1) {
-        // ≥ 200cm (2m) → SIAGA 1 (Waspada, himbauan)
-        if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-siaga1)';
+        // ≥ 200cm (2m) → SIAGA 1 (Waspada) → Kuning
+        if (waterFillEl) waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)');
         if (alertPanelEl) alertPanelEl.classList.add('status-siaga1');
         if (alertMessageEl) {
             alertMessageEl.textContent = 'SIAGA 1 (Waspada)';
@@ -424,8 +424,8 @@ function updateUI(waterLevel) {
         if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 1'; adminStatusAir.style.color = 'var(--status-siaga1)'; }
         currentState = 'SIAGA1';
     } else {
-        // < 200cm → Aman
-        if (waterFillEl) waterFillEl.style.backgroundColor = 'var(--water-aman)';
+        // < 200cm → Aman → Hijau
+        if (waterFillEl) waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #10b981 0%, #059669 100%)');
         if (alertPanelEl) alertPanelEl.classList.add('status-aman');
         if (alertMessageEl) { alertMessageEl.textContent = 'Aman'; alertMessageEl.style.color = 'var(--status-aman)'; }
         if (adminStatusAir) { adminStatusAir.textContent = 'Aman'; adminStatusAir.style.color = 'var(--status-aman)'; }

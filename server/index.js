@@ -118,15 +118,11 @@ async function startNotificationBot() {
         const newLevel = statusLevels[newStatus];
         const currentLevel = statusLevels[currentStatus];
 
-        // Kirim notifikasi HANYA jika:
-        // 1. Status berubah (Aman -> Siaga 1, dsb)
-        // 2. ATAU Status tetap tinggi tapi sudah lewat dari Cooldown (Reminder setiap 2 jam)
+        // Kirim notifikasi HANYA jika status berubah (Aman -> Siaga 1, dsb)
         const isStatusChanged = newStatus !== currentStatus;
-        const isStillDangerous = newLevel > 0;
-        const isCooldownOver = (now - lastNotificationTime) > COOLDOWN_MS;
 
-        if (isStatusChanged || (isStillDangerous && isCooldownOver)) {
-            console.log(`[${new Date().toISOString()}] Mengirim notifikasi: ${newStatus} (Alasan: ${isStatusChanged ? 'Perubahan Status' : 'Cooldown Reminder'})`);
+        if (isStatusChanged) {
+            console.log(`[${new Date().toISOString()}] Mengirim notifikasi: ${newStatus} (Alasan: Perubahan Status)`);
             
             // Simpan status baru SEBELUM kirim agar tidak terjadi race condition saat pengiriman lama
             currentStatus = newStatus;

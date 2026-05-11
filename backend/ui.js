@@ -65,6 +65,11 @@ function closeSuccessModal(event) {
     if (modal) modal.classList.remove('show');
 }
 
+function closeFCMPermissionModal() {
+    const modal = document.getElementById('fcm-permission-modal');
+    if (modal) modal.classList.remove('show');
+}
+
 // Global Notification Function
 function sendNotification(title, options) {
     if ("Notification" in window) {
