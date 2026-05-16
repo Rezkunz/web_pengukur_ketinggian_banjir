@@ -249,14 +249,14 @@ async function fetchHistoryData(dateStr) {
 
 function saveHourlyData(value) {
     if (!database || value === null || value === undefined) return;
-    if (isSensorOffline) return; 
+    if (isSensorOffline) return;
 
     const user = auth.currentUser;
     if (!user) return;
 
-    // Hanya admin yang bisa menyimpan data history ke database
-    database.ref('users/' + user.uid + '/role').once('value').then(snap => {
-        if (snap.val() !== 'admin') return;
+    // [SECURITY] Gunakan Custom Claims, bukan role dari database
+    checkUserRole(user).then(isAdmin => {
+        if (!isAdmin) return;
 
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0];
@@ -266,7 +266,7 @@ function saveHourlyData(value) {
         database.ref(path).once('value', (s) => {
             if (!s.exists()) {
                 database.ref(path).set(Math.round(value));
-                
+
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 31);
                 const oldDateStr = thirtyDaysAgo.toISOString().split('T')[0];
@@ -321,9 +321,9 @@ function saveChartPoint(value) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Hanya admin yang bisa menyimpan titik grafik
-    database.ref('users/' + user.uid + '/role').once('value').then(snap => {
-        if (snap.val() !== 'admin') return;
+    // [SECURITY] Gunakan Custom Claims, bukan role dari database
+    checkUserRole(user).then(isAdmin => {
+        if (!isAdmin) return;
 
         const historyRef = database.ref(CHART_HISTORY_PATH);
         const now = Date.now();
@@ -398,14 +398,29 @@ function updateUI(waterLevel) {
     const percentage = calculatePercentage(waterLevel, THRESHOLDS.MAX_TANK);
     if (waterFillEl) waterFillEl.style.height = `${percentage}%`;
 
-    if (alertPanelEl) alertPanelEl.className = 'alert-section glass-panel';
+    if (waterFillEl) {
+        // Hapus semua class status lama
+        waterFillEl.classList.remove('status-aman', 'status-siaga1', 'status-siaga2');
+    }
+
+    // Helper: set warna ombak langsung ke elemen SVG (CSS var tidak reliabel di SVG)
+    function setWaveColors(fill1, fill2) {
+        const waveSvg     = waterFillEl ? waterFillEl.querySelector('.wave-svg path')         : null;
+        const waveSvgOver = waterFillEl ? waterFillEl.querySelector('.wave-svg-overlay path') : null;
+        if (waveSvg)     waveSvg.setAttribute('fill', fill1);
+        if (waveSvgOver) waveSvgOver.setAttribute('fill', fill2);
+    }
 
     let currentState = 'AMAN';
 
     // Cek dari level tertinggi ke bawah
     if (waterLevel >= THRESHOLDS.SIAGA2) {
         // ≥ 300cm (3m) → SIAGA 2 (Bahaya) → Merah
-        if (waterFillEl) waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)');
+        if (waterFillEl) {
+            waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)');
+            waterFillEl.classList.add('status-siaga2');
+        }
+        setWaveColors('rgba(255,180,180,0.45)', 'rgba(255,120,120,0.28)');
         if (alertPanelEl) alertPanelEl.classList.add('status-siaga2');
         if (alertMessageEl) {
             alertMessageEl.textContent = 'SIAGA 2 (Bahaya!)';
@@ -415,7 +430,11 @@ function updateUI(waterLevel) {
         currentState = 'SIAGA2';
     } else if (waterLevel >= THRESHOLDS.SIAGA1) {
         // ≥ 200cm (2m) → SIAGA 1 (Waspada) → Kuning
-        if (waterFillEl) waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)');
+        if (waterFillEl) {
+            waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)');
+            waterFillEl.classList.add('status-siaga1');
+        }
+        setWaveColors('rgba(255,230,100,0.45)', 'rgba(255,210,60,0.28)');
         if (alertPanelEl) alertPanelEl.classList.add('status-siaga1');
         if (alertMessageEl) {
             alertMessageEl.textContent = 'SIAGA 1 (Waspada)';
@@ -425,12 +444,17 @@ function updateUI(waterLevel) {
         currentState = 'SIAGA1';
     } else {
         // < 200cm → Aman → Hijau
-        if (waterFillEl) waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #10b981 0%, #059669 100%)');
+        if (waterFillEl) {
+            waterFillEl.style.setProperty('--water-color', 'linear-gradient(180deg, #10b981 0%, #059669 100%)');
+            waterFillEl.classList.add('status-aman');
+        }
+        setWaveColors('rgba(255,255,255,0.38)', 'rgba(255,255,255,0.22)');
         if (alertPanelEl) alertPanelEl.classList.add('status-aman');
         if (alertMessageEl) { alertMessageEl.textContent = 'Aman'; alertMessageEl.style.color = 'var(--status-aman)'; }
         if (adminStatusAir) { adminStatusAir.textContent = 'Aman'; adminStatusAir.style.color = 'var(--status-aman)'; }
         currentState = 'AMAN';
     }
+
 
     if (currentState !== lastNotifState) {
         if (currentState === 'SIAGA2') {

@@ -64,6 +64,14 @@ function submitSaran(e) {
     e.target.reset();
 }
 
+// Helper to escape HTML and prevent XSS
+function escapeHTML(str) {
+    if (!str) return "";
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 // ADMIN DASHBOARD LOGICS
 function listenAdminData() {
     if(!database) return;
@@ -95,19 +103,24 @@ function listenAdminData() {
             else if(tk.includes('siaga 1') || tk.includes('waspada')) badgeColor = '#f59e0b'; // kuning/orange
             
             if(adminLapor) {
+                const safeNama = escapeHTML(data.nama || 'Anonim');
+                const safeLokasi = escapeHTML(data.lokasi || '-');
+                const safeTingkat = escapeHTML(data.tingkat || '-');
+                const safeTime = date.toLocaleString('id-ID');
+
                 adminLapor.innerHTML = `
                 <div class="admin-report-card" style="border-left: 6px solid ${badgeColor};">
                     <div class="admin-report-header">
                         <h4 class="admin-report-title">
-                            <span class="admin-report-name">👤 ${data.nama || 'Anonim'}</span>
+                            <span class="admin-report-name">👤 ${safeNama}</span>
                         </h4>
-                        <span class="admin-report-time">🕒 ${date.toLocaleString('id-ID')}</span>
+                        <span class="admin-report-time">🕒 ${safeTime}</span>
                     </div>
                     <div class="admin-report-body">
-                        <p class="admin-report-detail"><strong>📍 Lokasi:</strong> <span>${data.lokasi || '-'}</span></p>
+                        <p class="admin-report-detail"><strong>📍 Lokasi:</strong> <span>${safeLokasi}</span></p>
                         <p class="admin-report-detail" style="display: flex; align-items: center; gap: 5px;">
                             <strong>🌊 Tingkat:</strong> 
-                            <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${data.tingkat || '-'}</span>
+                            <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${safeTingkat}</span>
                         </p>
                     </div>
                 </div>
@@ -134,13 +147,17 @@ function listenAdminData() {
             const date = new Date(data.timestamp || Date.now());
             
             if(adminSaran) {
+                const safeEmail = escapeHTML(data.email || 'Pengguna Anonim');
+                const safePesan = escapeHTML(data.pesan || '-');
+                const safeTime = date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID');
+
                 adminSaran.innerHTML = `
                 <div class="admin-saran-card">
                     <div class="admin-saran-header">
-                        <h4 class="admin-saran-email">✉️ ${data.email || 'Pengguna Anonim'}</h4>
-                        <span class="admin-saran-time">${date.toLocaleDateString('id-ID')} ${date.toLocaleTimeString('id-ID')}</span>
+                        <h4 class="admin-saran-email">✉️ ${safeEmail}</h4>
+                        <span class="admin-saran-time">${safeTime}</span>
                     </div>
-                    <p class="admin-saran-pesan">"${data.pesan}"</p>
+                    <p class="admin-saran-pesan">"${safePesan}"</p>
                 </div>
                 ` + adminSaran.innerHTML;
             }

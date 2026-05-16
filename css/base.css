@@ -213,6 +213,74 @@ body.dark-mode .profile-dropdown li:last-child {
     color: #f87171 !important;
 }
 
+/* ── DARK MODE: Auth panel (login/register form) ── */
+body.dark-mode .auth-container {
+    background: transparent;
+}
+
+body.dark-mode .auth-panel {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+}
+
+body.dark-mode .auth-header-wrapper h2 {
+    color: #f1f5f9 !important;
+}
+
+body.dark-mode .auth-header-wrapper p {
+    color: #94a3b8 !important;
+}
+
+/* Toggle pill (Sign In / Sign Up) */
+body.dark-mode .auth-toggle-pill {
+    background: rgba(255,255,255,0.06) !important;
+}
+
+body.dark-mode .auth-pill-slider {
+    background: rgba(14, 165, 233, 0.85) !important;
+    box-shadow: 0 2px 10px rgba(14,165,233,0.35) !important;
+}
+
+body.dark-mode .auth-toggle-btn {
+    color: #64748b !important;
+}
+
+body.dark-mode .auth-toggle-btn.active {
+    color: #ffffff !important;
+}
+
+/* Auth waves di dark mode lebih gelap */
+body.dark-mode .layer-1 { fill: #0369a1; opacity: 0.6; }
+body.dark-mode .layer-2 { fill: #075985; opacity: 0.4; }
+body.dark-mode .layer-3 { fill: #0c4a6e; opacity: 0.25; }
+
+/* ── DARK MODE: News/Berita section header inline texts ── */
+body.dark-mode [style*="color:#1e293b"],
+body.dark-mode [style*="color: #1e293b"] {
+    color: #e2e8f0 !important;
+}
+
+body.dark-mode [style*="color:#64748b"],
+body.dark-mode [style*="color: #64748b"] {
+    color: #94a3b8 !important;
+}
+
+/* Forecast header h3 */
+body.dark-mode .forecast-header h3 {
+    color: #cbd5e1 !important;
+}
+
+/* Hourly scroll border */
+body.dark-mode .hourly-item {
+    border-right-color: rgba(255,255,255,0.07) !important;
+}
+
+/* Weather value text */
+body.dark-mode .weather-value {
+    color: #e2e8f0 !important;
+}
+
 /* Smooth transition semua elemen saat theme berubah */
 *, *::before, *::after {
     transition: background-color 0.35s ease, border-color 0.35s ease, color 0.2s ease !important;

@@ -41,12 +41,14 @@ auth.onAuthStateChanged(async (user) => {
             if (sidebarName)   sidebarName.textContent   = nama;
         });
 
-        const role = userData.role || 'user';
+        // [SECURITY] Role authority dari Custom Claims (JWT), BUKAN dari database.
+        // Nilai 'role' di database hanya untuk tampilan UI, tidak bisa dijadikan otoritas.
+        const isAdmin = await checkUserRole(user);
 
         // Panggil pendaftaran token
         setupFCMToken(user.uid);
 
-        if (role === 'admin') {
+        if (isAdmin) {
             if (!viewAdminDash.innerHTML) {
                 viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=98').then(r => r.text());
                 viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=98').then(r => r.text());

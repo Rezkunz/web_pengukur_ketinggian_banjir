@@ -45,15 +45,22 @@ if (!serviceAccount && process.env.FIREBASE_PRIVATE_KEY) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@safe-93f61.iam.gserviceaccount.com",
         privateKey: pk.replace(/\\n/g, '\n')
     };
-} else if (!serviceAccount) {
+}
+
+if (!serviceAccount) {
     const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
     if (fs.existsSync(serviceAccountPath)) {
+        console.warn("WARNING: Menggunakan serviceAccountKey.json lokal. Pastikan file ini tidak di-upload ke GitHub!");
         serviceAccount = require(serviceAccountPath);
-    } else {
-        console.error("ERROR: Kredensial tidak ditemukan!");
-        process.exit(1);
     }
 }
+
+if (!serviceAccount) {
+    console.error("ERROR: Kredensial tidak ditemukan! Harap set FIREBASE_CONFIG_BASE64 atau FIREBASE_PRIVATE_KEY di Environment Variables.");
+    process.exit(1);
+}
+
+
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),

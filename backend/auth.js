@@ -39,9 +39,15 @@ async function openEditProfile() {
 
 async function checkUserRole(user) {
     if(!user) return false;
-    const snap = await database.ref('users/' + user.uid + '/role').once('value');
-    return snap.val() === 'admin';
+    try {
+        const idTokenResult = await user.getIdTokenResult();
+        return !!idTokenResult.claims.admin;
+    } catch (e) {
+        console.error("Error checking claims:", e);
+        return false;
+    }
 }
+
 
 async function closeEditProfile() {
     const viewEdit = document.getElementById('view-edit-profile');
@@ -125,12 +131,12 @@ function handleLogin(e) {
     const px = document.getElementById('login-password').value;
     
     auth.signInWithEmailAndPassword(em, px).catch(err => {
-        let msg = err.message;
-        if(err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'Email atau password yang Anda masukkan salah.';
-        else if(err.code === 'auth/user-not-found') msg = 'Akun dengan email tersebut tidak ditemukan.';
-        else if(err.code === 'auth/invalid-email') msg = 'Format email tidak valid.';
+        // Generic message for security (prevent email enumeration)
+        const msg = 'Email atau password yang Anda masukkan salah.';
         showCustomModal('SIAGA2', 'Login Gagal', msg);
+        console.error("Login Error:", err.code);
     });
+
 }
 
 function handleRegister(e) {
@@ -141,10 +147,12 @@ function handleRegister(e) {
     
     auth.createUserWithEmailAndPassword(em, px).then((cred) => {
         if(database) {
+            // [SECURITY] Tidak menyimpan 'role' di database.
+            // Role authoritative HANYA dari Firebase Custom Claims (admin.auth().setCustomUserClaims).
+            // Field 'role' di DB hanya untuk tampilan UI dan di-set oleh Admin secara manual.
             database.ref('users/' + cred.user.uid).set({
                 nama: name,
-                email: em,
-                role: 'user'
+                email: em
             });
         }
     }).catch(err => {

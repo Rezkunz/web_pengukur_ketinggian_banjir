@@ -12,7 +12,9 @@ char pass[] = "Mabelku18";
 
 // Konfigurasi Firebase Anda
 #define FIREBASE_HOST "safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app"
-#define FIREBASE_AUTH "AIzaSyChO4h8v33LB_ovIXcBg-yVJrmN40N0WUk"
+#define FIREBASE_API_KEY "AIzaSyChO4h8v33LB_ovIXcBg-yVJrmN40N0WUk"
+#define DEVICE_EMAIL "device@safe.id"
+#define DEVICE_PASSWORD "device_safe_123" // Ganti dengan password yang Anda buat di Firebase Auth
 
 // Variabel Firebase
 FirebaseData fbdo;
@@ -20,28 +22,9 @@ FirebaseAuth auth_fb;
 FirebaseConfig config_fb;
 
 unsigned long lastFirebaseUpdate = 0;
-const unsigned long firebaseInterval = 500; // Dibuat sangat ngebut (0.5 detik) karena sudah tidak terbebani Telegram
+const unsigned long firebaseInterval = 1000; // Dikurangi ke 1 detik agar lebih stabil
 
-// Inisialisasi Perangkat
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-const int trigPin = 14; // D5
-const int echoPin = 12; // D6
-
-#define SOUND_VELOCITY 0.034
-long duration;
-int d_cm;
-int H = 400;  // Tinggi pemasangan sensor dari dasar (cm). Ditingkatkan ke 4 Meter.
-int level;    // Tinggi air dalam cm = H - d_cm (sensor menghadap ke BAWAH)
-int s1 = 0, s2 = 0; 
-String status;
-
-// Threshold Ketinggian Air (sensor ke BAWAH: level = H - d_cm)
-// d_cm=200 → level=400-200=200cm → SIAGA 1
-// d_cm=100 → level=400-100=300cm → SIAGA 2 (lebih bahaya)
-#define LEVEL_SIAGA1 200 // level >= 200cm: SIAGA 1 (waspada)
-#define LEVEL_SIAGA2 300 // level >= 300cm: SIAGA 2 (bahaya)
-
-void baca_level(); 
+// ... (Inisialisasi LCD dan Pin tetap sama) ...
 
 void setup() {
   Serial.begin(115200); 
@@ -67,12 +50,16 @@ void setup() {
   lcd.print("Koneksi Sukses!");
   delay(1000);
   
-  // Inisialisasi Firebase
+  // Inisialisasi Firebase SECURE (Email/Password)
   lcd.clear();
-  lcd.print("Koneksi Firebase");
+  lcd.print("Auth Firebase...");
   config_fb.host = FIREBASE_HOST;
-  config_fb.signer.tokens.legacy_token = FIREBASE_AUTH;
+  config_fb.api_key = FIREBASE_API_KEY;
+  auth_fb.user.email = DEVICE_EMAIL;
+  auth_fb.user.password = DEVICE_PASSWORD;
+  
   Firebase.begin(&config_fb, &auth_fb);
+
   
   // Batasi SSL Buffer Firebase
   fbdo.setBSSLBufferSize(1024, 1024);

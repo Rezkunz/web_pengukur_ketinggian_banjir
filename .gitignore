@@ -1,4 +1,6 @@
 .vercel
+.env
+.env.*
 .env*.local
 node_modules/
 dist/
@@ -8,3 +10,6 @@ dist/
 server/node_modules/
 server/serviceAccountKey.json
 server/safe-93f61-*.json
+
+# Set-admin script output log (tidak perlu di repo)
+server/set-admin-output.log
