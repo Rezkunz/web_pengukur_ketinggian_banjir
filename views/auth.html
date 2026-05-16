@@ -87,7 +87,9 @@
     width: 72px;
     height: 72px;
     margin-bottom: 16px;
-    mix-blend-mode: multiply; /* Menghilangkan background putih */
+    /* Light mode: hilangkan bg putih di logo */
+    mix-blend-mode: multiply;
+    transition: filter 0.3s, mix-blend-mode 0.3s;
 }
 
 .auth-header-wrapper h2 {
@@ -198,6 +200,39 @@
         padding: 12px;
         font-size: 0.95rem;
     }
+}
+
+/* ── Input fields di auth ── */
+.auth-panel .form-group input,
+.auth-panel input[type="email"],
+.auth-panel input[type="password"],
+.auth-panel input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.85);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    margin-bottom: 14px;
+    display: block;
+}
+
+.auth-panel .form-group input:focus,
+.auth-panel input[type="email"]:focus,
+.auth-panel input[type="password"]:focus,
+.auth-panel input[type="text"]:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+    background: #fff;
+}
+
+.auth-panel .form-group input::placeholder,
+.auth-panel input::placeholder {
+    color: #94a3b8;
 }
 </style>
 

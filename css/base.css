@@ -232,6 +232,13 @@ body.dark-mode .auth-header-wrapper p {
     color: #94a3b8 !important;
 }
 
+/* Logo: Hilangkan background putih dan buat logonya jadi putih cerah */
+body.dark-mode .auth-header-wrapper img {
+    filter: invert(1) grayscale(1) brightness(2);
+    mix-blend-mode: screen !important;
+    opacity: 0.9;
+}
+
 /* Toggle pill (Sign In / Sign Up) */
 body.dark-mode .auth-toggle-pill {
     background: rgba(255,255,255,0.06) !important;
@@ -248,6 +255,27 @@ body.dark-mode .auth-toggle-btn {
 
 body.dark-mode .auth-toggle-btn.active {
     color: #ffffff !important;
+}
+
+/* Input fields di dark mode: background gelap, teks putih */
+body.dark-mode .auth-panel input[type="email"],
+body.dark-mode .auth-panel input[type="password"],
+body.dark-mode .auth-panel input[type="text"],
+body.dark-mode .auth-panel .form-group input {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border-color: rgba(255,255,255,0.12) !important;
+    color: #f1f5f9 !important;
+}
+
+body.dark-mode .auth-panel input::placeholder,
+body.dark-mode .auth-panel .form-group input::placeholder {
+    color: #64748b !important;
+}
+
+body.dark-mode .auth-panel input:focus {
+    border-color: rgba(14,165,233,0.5) !important;
+    background: rgba(30, 41, 59, 1) !important;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important;
 }
 
 /* Auth waves di dark mode lebih gelap */
