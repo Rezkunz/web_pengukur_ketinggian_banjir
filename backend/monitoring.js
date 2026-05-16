@@ -682,10 +682,244 @@ function startOfflineDetector() {
 }
 
 // ─────────────────────────────────────────────
+// START: Weather Fetching Logic
+// ─────────────────────────────────────────────
+const WEATHER_LAT = '-6.984213743617759';
+const WEATHER_LON = '107.62672849717276';
+let weatherIntervalTimer = null;
+
+function getWmoDescription(code) {
+    if (code === 0) return "Cerah";
+    if (code === 1 || code === 2) return "Cerah Berawan";
+    if (code === 3) return "Mendung";
+    if (code === 45 || code === 48) return "Berkabut";
+    if (code >= 51 && code <= 55) return "Gerimis";
+    if (code >= 61 && code <= 65) return "Hujan";
+    if (code >= 80 && code <= 82) return "Hujan Deras";
+    if (code >= 95) return "Badai Petir";
+    return "Berawan";
+}
+
+function getWmoIconImg(code) {
+    let icon = "day";
+    if (code === 0 || code === 1) icon = "day";
+    else if (code === 2) icon = "cloudy-day-1";
+    else if (code === 3) icon = "cloudy";
+    else if (code === 45 || code === 48) icon = "cloudy";
+    else if (code >= 51 && code <= 55) icon = "rainy-4";
+    else if (code >= 61 && code <= 65) icon = "rainy-6";
+    else if (code >= 80 && code <= 82) icon = "rainy-7";
+    else if (code >= 95) icon = "thunder";
+    return `<img src="https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/${icon}.svg" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
+}
+
+async function fetchWeatherNews() {
+    const container = document.getElementById('weather-news-container');
+    const badge = document.getElementById('news-refresh-badge');
+    if (!container) return;
+
+    // Google News RSS via rss2json — query khusus: banjir, cuaca ekstrem, bandung
+    const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=banjir+OR+%22cuaca+ekstrem%22+OR+%22banjir+bandung%22+OR+bmkg&hl=id&gl=ID&ceid=ID:id');
+    const url = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network error');
+        const data = await response.json();
+
+        if (!data || data.status !== 'ok' || !data.items || data.items.length === 0)
+            throw new Error('No items');
+
+        // Update badge with last refreshed time
+        const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        if (badge) badge.textContent = `Diperbarui ${now}`;
+
+        container.innerHTML = '';
+
+        data.items.slice(0, 4).forEach((item, i) => {
+            const fullTitle = item.title || '';
+            const title = fullTitle.split(' - ')[0].trim();
+            const source = item.author || (fullTitle.split(' - ').slice(-1)[0]?.trim()) || 'Google News';
+            const pubDate = item.pubDate || '';
+            const link = item.link || '#';
+
+            // Format waktu relatif
+            const date = new Date(pubDate);
+            const diffMin = Math.round((Date.now() - date.getTime()) / 60000);
+            let timeAgo = '';
+            if (isNaN(diffMin) || diffMin < 0) timeAgo = 'Terbaru';
+            else if (diffMin < 60) timeAgo = `${diffMin} menit lalu`;
+            else if (diffMin < 1440) timeAgo = `${Math.floor(diffMin / 60)} jam lalu`;
+            else timeAgo = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+            // Badge kategori otomatis berdasarkan isi judul
+            const lc = title.toLowerCase();
+            let badgeHtml = '';
+            if (lc.includes('banjir')) badgeHtml = '<span class="news-badge badge-banjir">🌊 Banjir</span>';
+            else if (lc.includes('cuaca') || lc.includes('bmkg') || lc.includes('hujan')) badgeHtml = '<span class="news-badge badge-cuaca">🌧️ Cuaca</span>';
+            else if (lc.includes('bandung')) badgeHtml = '<span class="news-badge badge-bandung">📍 Bandung</span>';
+            else badgeHtml = '<span class="news-badge badge-alert">⚠️ Peringatan</span>';
+
+            const card = `
+                <a href="${link}" target="_blank" rel="noopener" class="news-card fade-in-up" style="animation-delay:${i * 0.12}s">
+                    <div class="news-card-inner">
+                        <div class="news-card-top">
+                            ${badgeHtml}
+                            <span class="news-time">${timeAgo}</span>
+                        </div>
+                        <div class="news-card-title">${title}</div>
+                        <div class="news-card-source">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm1-11h-2V7h2v2zm0 6h-2v-4h2v4z"/></svg>
+                            ${source}
+                        </div>
+                    </div>
+                    <div class="news-card-arrow">›</div>
+                </a>
+            `;
+            container.innerHTML += card;
+        });
+
+    } catch (err) {
+        console.warn('Gagal memuat berita:', err);
+        if (badge) badge.textContent = 'Gagal memuat';
+        container.innerHTML = `
+            <div class="news-error">
+                <span>📡</span>
+                <div>Berita tidak dapat dimuat.<br><small>Periksa koneksi internet Anda.</small></div>
+            </div>
+        `;
+    }
+}
+
+async function fetchWeatherData() {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        if (data && data.current) {
+            updateWeatherUI(data);
+            if (data.hourly) renderHourlyForecast(data.hourly);
+            if (data.daily) renderDailyForecast(data.daily);
+        }
+    } catch (err) {
+        console.warn('Gagal memuat cuaca:', err);
+        const descEl = document.getElementById('weather-desc');
+        if (descEl) descEl.textContent = 'Gagal memuat cuaca';
+    }
+}
+
+function updateWeatherUI(data) {
+    const tempEl = document.getElementById('weather-temp');
+    const descEl = document.getElementById('weather-desc');
+    const locEl = document.getElementById('weather-location');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+
+    const current = data.current;
+    
+    if (tempEl) tempEl.textContent = `${Math.round(current.temperature_2m)}°C`;
+    
+    if (descEl) {
+        descEl.textContent = getWmoDescription(current.weather_code);
+    }
+    
+    if (locEl) locEl.textContent = 'Bojongsoang';
+    
+    if (humEl) humEl.textContent = `${current.relative_humidity_2m}%`;
+    if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
+}
+
+function renderHourlyForecast(hourly) {
+    const container = document.getElementById('hourly-forecast-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    const now = new Date();
+    
+    let startIndex = 0;
+    for (let i = 0; i < hourly.time.length; i++) {
+        const time = new Date(hourly.time[i]);
+        if (time >= now) {
+            startIndex = i;
+            break;
+        }
+    }
+    
+    let delay = 0;
+    for (let i = startIndex; i < startIndex + 24 && i < hourly.time.length; i += 3) {
+        const time = new Date(hourly.time[i]);
+        const timeStr = time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        const temp = Math.round(hourly.temperature_2m[i]);
+        const code = hourly.weather_code[i];
+        
+        const div = document.createElement('div');
+        div.className = 'hourly-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="hourly-time">${timeStr}</div>
+            <div class="hourly-icon" style="width: 48px; height: 48px; margin-bottom: 8px;">${getWmoIconImg(code)}</div>
+            <div class="hourly-temp">${temp}°</div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    }
+}
+
+function renderDailyForecast(daily) {
+    const container = document.getElementById('daily-forecast-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    
+    let delay = 0;
+    for (let i = 0; i < Math.min(7, daily.time.length); i++) {
+        const date = new Date(daily.time[i]);
+        const isToday = i === 0;
+        const dayName = isToday ? 'Hari Ini' : days[date.getDay()];
+        
+        const min = Math.round(daily.temperature_2m_min[i]);
+        const max = Math.round(daily.temperature_2m_max[i]);
+        const code = daily.weather_code[i];
+        
+        const div = document.createElement('div');
+        div.className = 'daily-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="daily-day" style="flex: 1;">${dayName}</div>
+            <div class="daily-icon" style="width: 32px; height: 32px;">${getWmoIconImg(code)}</div>
+            <div class="daily-desc" style="flex: 1.5; padding-left: 10px; font-size: 0.85rem; color: #1e293b; font-weight: 600;">${getWmoDescription(code)}</div>
+            <div class="daily-temps" style="flex: 1; text-align: right; justify-content: flex-end;">
+                <span class="temp-min">${min}°</span>
+                <span class="temp-max">${max}°</span>
+            </div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    }
+}
+
+function startWeatherListener() {
+    fetchWeatherData();
+    fetchWeatherNews();
+    // Update setiap 30 menit
+    if (weatherIntervalTimer) clearInterval(weatherIntervalTimer);
+    weatherIntervalTimer = setInterval(() => {
+        fetchWeatherData();
+        fetchWeatherNews();
+    }, 30 * 60 * 1000);
+}
+
+// ─────────────────────────────────────────────
 // START: Listener utama untuk data sensor & grafik
 // ─────────────────────────────────────────────
 function startDataListener() {
     if (!database) return;
+
+    // 0. Mulai fetch cuaca
+    startWeatherListener();
 
     // 1. Real-time listener grafik
     startChartHistoryListener();

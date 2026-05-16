@@ -58,6 +58,7 @@ auth.onAuthStateChanged(async (user) => {
             document.body.classList.add('admin-view');
             document.body.classList.remove('user-view');
             viewAdminDash.classList.add('active');
+            setThemeFabVisible(true);
             bindDOM();
             initChart(true);
             listenAdminData();
@@ -75,6 +76,7 @@ auth.onAuthStateChanged(async (user) => {
             document.body.classList.add('user-view');
             document.body.classList.remove('admin-view');
             viewMonitoring.classList.add('active');
+            setThemeFabVisible(true);
             bindDOM();
             initChart(false);
             startDataListener();
@@ -85,6 +87,7 @@ auth.onAuthStateChanged(async (user) => {
         if (adminNav) adminNav.style.display = 'none';
         document.body.classList.remove('admin-view');
         document.body.classList.remove('user-view');
+        setThemeFabVisible(false);
         if (!viewAuth.innerHTML) {
             viewAuth.innerHTML = await fetch('views/auth.html?v=98').then(r => r.text());
         }

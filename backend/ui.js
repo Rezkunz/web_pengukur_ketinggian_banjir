@@ -1,3 +1,37 @@
+// ── THEME TOGGLE (Dark / Light Mode) ──
+function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    try { localStorage.setItem('safe-theme', isDark ? 'dark' : 'light'); } catch(e) {}
+    _updateThemeLabels(isDark);
+}
+
+function _updateThemeLabels(isDark) {
+    document.querySelectorAll('.sidebar-theme-label').forEach(el => {
+        el.textContent = isDark ? 'Mode Gelap' : 'Mode Terang';
+    });
+}
+
+// Tampilkan/sembunyikan FAB berdasarkan status login
+function setThemeFabVisible(visible) {
+    const fab = document.getElementById('theme-fab');
+    if (!fab) return;
+    fab.style.display = visible ? 'block' : 'none';
+}
+
+// Restore theme saat halaman dimuat
+(function initTheme() {
+    try {
+        const saved = localStorage.getItem('safe-theme');
+        if (saved === 'dark') {
+            document.body.classList.add('dark-mode');
+            setTimeout(() => _updateThemeLabels(true), 100);
+        }
+    } catch(e) {}
+    // FAB hidden by default, shown after login
+    const fab = document.getElementById('theme-fab');
+    if (fab) fab.style.display = 'none';
+})();
+
 // Generic UI Navigation & DOM bindings
 function bindDOM() {
     const navItems = document.querySelectorAll('.nav-item');
@@ -85,22 +119,61 @@ function sendNotification(title, options) {
     }
 }
 
-// Toggle dropdown profile di sidebar (desktop/tablet)
+// Toggle dropdown profile di sidebar (desktop/tablet) — floating popover
 function toggleSidebarProfileMenu(role) {
     const dd = document.getElementById(`sidebar-dd-${role}`);
-    const chevron = document.querySelector(`#sidebar-profile-${role} .sidebar-chevron`);
     if (!dd) return;
 
     const isOpen = dd.classList.contains('open');
-    // Tutup semua dropdown sidebar lain dulu
-    document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
-    document.querySelectorAll('.sidebar-chevron').forEach(el => el.style.transform = '');
+
+    // Tutup semua popover lain
+    closeSidebarProfileMenu();
 
     if (!isOpen) {
+        // Sync nama & avatar ke popover header
+        const sidebarName = document.getElementById(`sidebar-name-${role}`)?.textContent || '';
+        const sidebarAvatar = document.getElementById(`sidebar-avatar-${role}`)?.textContent || '';
+        const ddName = document.getElementById(`sidebar-dd-name-${role}`);
+        const ddAvatar = document.getElementById(`sidebar-dd-avatar-${role}`);
+        if (ddName) ddName.textContent = sidebarName;
+        if (ddAvatar) ddAvatar.textContent = sidebarAvatar;
+
         dd.classList.add('open');
-        if (chevron) chevron.style.transform = 'rotate(180deg)';
     }
 }
+
+// Tutup semua sidebar profile popover
+function closeSidebarProfileMenu() {
+    document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
+}
+
+// Toggle collapse/expand sidebar di desktop
+function toggleSidebar() {
+    // Hanya aktif di desktop (min-width 768px)
+    if (window.innerWidth < 768) return;
+
+    const navbars = document.querySelectorAll('.bottom-nav');
+    navbars.forEach(nav => {
+        nav.classList.toggle('sidebar-collapsed');
+    });
+
+    const isCollapsed = document.querySelector('.bottom-nav')?.classList.contains('sidebar-collapsed');
+    try { localStorage.setItem('sidebar-collapsed', isCollapsed ? '1' : '0'); } catch(e) {}
+}
+
+// Restore sidebar state dari localStorage saat init
+(function restoreSidebarState() {
+    try {
+        if (localStorage.getItem('sidebar-collapsed') === '1' && window.innerWidth >= 768) {
+            // Tunda sedikit agar navbars sudah di-render oleh auth state
+            setTimeout(() => {
+                document.querySelectorAll('.bottom-nav').forEach(nav => {
+                    nav.classList.add('sidebar-collapsed');
+                });
+            }, 600);
+        }
+    } catch(e) {}
+})();
 
 // Toggle dropdown profile di header (mobile)
 function toggleProfileMenu() {
@@ -112,12 +185,11 @@ function toggleProfileMenu() {
 
 // Tutup dropdown jika klik di luar
 document.addEventListener('click', (e) => {
-    // Sidebar profile dropdowns
-    if (!e.target.closest('.sidebar-profile')) {
-        document.querySelectorAll('.sidebar-profile-dropdown').forEach(el => el.classList.remove('open'));
-        document.querySelectorAll('.sidebar-chevron').forEach(el => el.style.transform = '');
+    // Sidebar profile popover — tutup jika klik di luar .sidebar-profile DAN di luar popover
+    if (!e.target.closest('.sidebar-profile') && !e.target.closest('.sidebar-profile-dropdown')) {
+        closeSidebarProfileMenu();
     }
-    // Header profile dropdown
+    // Header profile dropdown (mobile)
     if (!e.target.closest('.profile-menu-wrapper')) {
         const dd = document.getElementById('profile-dropdown');
         if (dd) dd.style.display = 'none';

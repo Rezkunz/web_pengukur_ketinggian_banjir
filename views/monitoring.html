@@ -15,44 +15,142 @@
                     <div class="offline-dot"></div>
                 </div>
 
-                <!-- Water Visualization -->
-                <section class="water-container glass-panel">
-        <!-- Sisi Kiri: Tabung Air Premium -->
-        <div class="water-tank-container">
-            <div class="water-tank-glass">
-                <div class="water-tank-inner" id="water-tank">
-                    <div class="water-fill" id="water-fill">
-                        <!-- Animasi Gelombang -->
-                        <div class="wave-wrap">
-                            <svg class="wave-svg" viewBox="0 0 1200 24" preserveAspectRatio="none">
-                                <path d="M0,12 C150,24 350,0 600,12 C850,24 1050,0 1200,12 L1200,24 L0,24 Z"/>
-                            </svg>
-                            <svg class="wave-svg-overlay" viewBox="0 0 1200 24" preserveAspectRatio="none">
-                                <path d="M0,12 C200,0 400,24 600,12 C800,0 1000,24 1200,12 L1200,24 L0,24 Z"/>
-                            </svg>
+                <!-- Top Row: Water Status and Weather Grid -->
+                <div class="dashboard-top-row">
+                    
+                    <!-- Sisi Kiri: Water Visualization -->
+                    <section class="water-container glass-panel">
+                        <div class="water-tank-container">
+                            <div class="water-tank-glass">
+                                <div class="water-tank-inner" id="water-tank">
+                                    <div class="water-fill" id="water-fill">
+                                        <!-- Animasi Gelombang -->
+                                        <div class="wave-wrap">
+                                            <svg class="wave-svg" viewBox="0 0 1200 24" preserveAspectRatio="none">
+                                                <path d="M0,12 C150,24 350,0 600,12 C850,24 1050,0 1200,12 L1200,24 L0,24 Z"/>
+                                            </svg>
+                                            <svg class="wave-svg-overlay" viewBox="0 0 1200 24" preserveAspectRatio="none">
+                                                <path d="M0,12 C200,0 400,24 600,12 C800,0 1000,24 1200,12 L1200,24 L0,24 Z"/>
+                                            </svg>
+                                        </div>
+                                        <!-- Animasi Gelembung -->
+                                        <div class="bubbles-container">
+                                            <div class="bubble-item"></div>
+                                            <div class="bubble-item"></div>
+                                            <div class="bubble-item"></div>
+                                            <div class="bubble-item"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Efek Kilap Kaca -->
+                                <div class="tank-reflection"></div>
+                            </div>
                         </div>
-                        <!-- Animasi Gelembung -->
-                        <div class="bubbles-container">
-                            <div class="bubble-item"></div>
-                            <div class="bubble-item"></div>
-                            <div class="bubble-item"></div>
-                            <div class="bubble-item"></div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Efek Kilap Kaca -->
-                <div class="tank-reflection"></div>
-            </div>
-        </div>
 
-                    <div class="level-info">
-                        <h3>Tinggi Air</h3>
-                        <div class="level-value">
-                            <span id="current-level">0</span>
-                            <span class="unit">cm</span>
+                        <div class="level-info">
+                            <h3>Tinggi Air</h3>
+                            <div class="level-value">
+                                <span id="current-level">0</span>
+                                <span class="unit">cm</span>
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+
+                    <!-- Sisi Kanan: Weather Grid -->
+                    <section class="weather-grid" id="weather-panel">
+                        <!-- Card 1: Temp & Condition -->
+                        <div class="weather-card glass-panel">
+                            <div class="weather-card-header">
+                                <div class="weather-icon icon-orange">
+                                    <svg class="anim-spin-slow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                                </div>
+                                <span class="weather-label">Suhu</span>
+                            </div>
+                            <div class="weather-card-body">
+                                <span id="weather-temp" class="weather-value">--°C</span>
+                                <span id="weather-desc" class="weather-subtext">Memuat...</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Humidity -->
+                        <div class="weather-card glass-panel">
+                            <div class="weather-card-header">
+                                <div class="weather-icon icon-blue">
+                                    <svg class="anim-bounce-soft" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                                </div>
+                                <span class="weather-label">Kelembapan</span>
+                            </div>
+                            <div class="weather-card-body">
+                                <span id="weather-humidity" class="weather-value">--%</span>
+                                <span class="weather-subtext">Relatif</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Wind -->
+                        <div class="weather-card glass-panel">
+                            <div class="weather-card-header">
+                                <div class="weather-icon icon-teal">
+                                    <svg class="anim-slide-x" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+                                </div>
+                                <span class="weather-label">Angin</span>
+                            </div>
+                            <div class="weather-card-body">
+                                <span id="weather-wind" class="weather-value">-- m/s</span>
+                                <span class="weather-subtext">Kecepatan</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Location -->
+                        <div class="weather-card glass-panel">
+                            <div class="weather-card-header">
+                                <div class="weather-icon icon-red">
+                                    <svg class="anim-bounce-pin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                </div>
+                                <span class="weather-label">Lokasi</span>
+                            </div>
+                            <div class="weather-card-body">
+                                <span id="weather-location" class="weather-value" style="font-size: 1.5rem">Bandung</span>
+                                <span class="weather-subtext">Jawa Barat</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Forecast Section -->
+                <div class="forecast-wrapper">
+                    <section class="forecast-section glass-panel">
+                        <div class="forecast-header">
+                            <h3>Prakiraan Cuaca Hari Ini</h3>
+                        </div>
+                        <div class="hourly-scroll-area" id="hourly-forecast-container">
+                            <div style="text-align:center; padding: 20px; font-size: 0.9rem; color: #64748b;">Memuat data...</div>
+                        </div>
+                        <div class="news-section-header" style="display:flex; align-items:center; gap:8px; margin-top:16px; margin-bottom:10px; padding-top:14px; border-top: 1px solid rgba(0,0,0,0.07);">
+                            <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#ef4444,#f97316); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19 20H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4l2-2h4l2 2h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3zM5 6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-size:0.8rem; font-weight:700; color:#1e293b; font-family:'Nunito',sans-serif;">Berita Terkini</div>
+                                <div style="font-size:0.68rem; color:#64748b;">Banjir · Cuaca Ekstrem · Bandung</div>
+                            </div>
+                            <div id="news-refresh-badge" style="margin-left:auto; font-size:0.65rem; color:#94a3b8;">Memuat...</div>
+                        </div>
+                        <div class="news-container" id="weather-news-container" style="display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto; padding-right:2px;">
+                            <div class="news-skeleton"></div>
+                            <div class="news-skeleton"></div>
+                            <div class="news-skeleton"></div>
+                        </div>
+                    </section>
+                    
+                    <section class="forecast-section glass-panel">
+                        <div class="forecast-header">
+                            <h3>Prakiraan Cuaca 7 Hari</h3>
+                        </div>
+                        <div class="daily-list" id="daily-forecast-container">
+                            <div style="text-align:center; padding: 20px; font-size: 0.9rem; color: #64748b;">Memuat data...</div>
+                        </div>
+                    </section>
+                </div>
 
                 <!-- Status Alert -->
                 <section class="alert-section glass-panel status-aman" id="alert-panel">
@@ -68,6 +166,7 @@
                         <p id="alert-message">Aman</p>
                     </div>
                 </section>
+
 
                 <!-- Debit Chart -->
                 <section class="chart-section glass-panel">

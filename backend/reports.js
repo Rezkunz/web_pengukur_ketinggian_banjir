@@ -96,16 +96,16 @@ function listenAdminData() {
             
             if(adminLapor) {
                 adminLapor.innerHTML = `
-                <div style="background: rgba(255,255,255,0.85); padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border-left: 6px solid ${badgeColor}; transition: transform 0.2s;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <h4 style="margin: 0; color: #2c3e50; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                            <span style="background: #ecf0f1; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; color: #7f8c8d;">👤 ${data.nama || 'Anonim'}</span>
+                <div class="admin-report-card" style="border-left: 6px solid ${badgeColor};">
+                    <div class="admin-report-header">
+                        <h4 class="admin-report-title">
+                            <span class="admin-report-name">👤 ${data.nama || 'Anonim'}</span>
                         </h4>
-                        <span style="font-size: 0.75rem; color: #95a5a6; background: #f8f9fa; padding: 4px 8px; border-radius: 6px;">🕒 ${date.toLocaleString('id-ID')}</span>
+                        <span class="admin-report-time">🕒 ${date.toLocaleString('id-ID')}</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 5px;">
-                        <p style="margin: 0; color: #34495e; font-size: 0.95rem;"><strong>📍 Lokasi:</strong> <span style="color: #555;">${data.lokasi || '-'}</span></p>
-                        <p style="margin: 0; color: #34495e; font-size: 0.95rem; display: flex; align-items: center; gap: 5px;">
+                    <div class="admin-report-body">
+                        <p class="admin-report-detail"><strong>📍 Lokasi:</strong> <span>${data.lokasi || '-'}</span></p>
+                        <p class="admin-report-detail" style="display: flex; align-items: center; gap: 5px;">
                             <strong>🌊 Tingkat:</strong> 
                             <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${data.tingkat || '-'}</span>
                         </p>
@@ -117,7 +117,7 @@ function listenAdminData() {
         
         if(adminTotalLaporanLegacy) adminTotalLaporanLegacy.textContent = count;
         if(statTotalLaporan) statTotalLaporan.textContent = count;
-        if(count === 0 && adminLapor) adminLapor.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:30px; background: rgba(255,255,255,0.5); border-radius: 15px; border: 2px dashed #bdc3c7;">Belum ada laporan genangan masuk.</div>';
+        if(count === 0 && adminLapor) adminLapor.innerHTML = '<div class="admin-empty-state">Belum ada laporan genangan masuk.</div>';
     });
     
     // 3. Listen to Saran
@@ -135,18 +135,18 @@ function listenAdminData() {
             
             if(adminSaran) {
                 adminSaran.innerHTML = `
-                <div style="background: rgba(255,255,255,0.85); padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 6px solid #2ecc71; transition: transform 0.2s;">
-                    <div style="display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 10px;">
-                        <h4 style="margin: 0; color: #2c3e50; font-size: 1rem; word-break: break-all; line-height: 1.4;">✉️ ${data.email || 'Pengguna Anonim'}</h4>
-                        <span style="font-size: 0.75rem; color: #95a5a6;">${date.toLocaleDateString('id-ID')} ${date.toLocaleTimeString('id-ID')}</span>
+                <div class="admin-saran-card">
+                    <div class="admin-saran-header">
+                        <h4 class="admin-saran-email">✉️ ${data.email || 'Pengguna Anonim'}</h4>
+                        <span class="admin-saran-time">${date.toLocaleDateString('id-ID')} ${date.toLocaleTimeString('id-ID')}</span>
                     </div>
-                    <p style="margin: 0; color: #555; font-size: 0.95rem; line-height: 1.5; font-style: italic; word-break: break-word;">"${data.pesan}"</p>
+                    <p class="admin-saran-pesan">"${data.pesan}"</p>
                 </div>
                 ` + adminSaran.innerHTML;
             }
         });
         
         if(statTotalSaran) statTotalSaran.textContent = count;
-        if(count === 0 && adminSaran) adminSaran.innerHTML = '<div style="text-align:center; color:#95a5a6; padding:30px; background: rgba(255,255,255,0.5); border-radius: 15px; border: 2px dashed #bdc3c7;">Belum ada saran atau feedback.</div>';
+        if(count === 0 && adminSaran) adminSaran.innerHTML = '<div class="admin-empty-state">Belum ada saran atau feedback.</div>';
     });
 }
