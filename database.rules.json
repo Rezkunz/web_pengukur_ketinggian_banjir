@@ -1,18 +1,14 @@
 {
   "rules": {
-    // [SECURITY] Default: TOLAK semua akses yang tidak didefinisikan secara eksplisit
     ".read": false,
     ".write": false,
 
     "sensor_data": {
-      // Hanya pengguna terautentikasi yang TERDAFTAR di sistem yang bisa membaca.
       ".read": "auth != null && (auth.token.admin === true || root.child('users').child(auth.uid).exists())",
       
-      // Default write ditolak, diatur spesifik per anak
       ".write": false,
 
       "water_level": {
-        // Hanya Admin atau IoT Device yang bisa memanipulasi sensor utama
         ".write": "auth != null && (auth.token.admin === true || auth.token.email === 'device@safe.id')"
       },
       "ts": {
@@ -22,48 +18,36 @@
         ".write": "auth != null && (auth.token.admin === true || auth.token.email === 'device@safe.id')"
       },
       "config": {
-        // Hanya Admin yang bisa mengubah konfigurasi OTA
         ".write": "auth != null && auth.token.admin === true"
       },
       "chart_history": {
-        // Semua klien bisa auto-save grafik riwayat real-time
         ".write": "auth != null"
       }
     },
 
     "history": {
-      // Semua pengguna terautentikasi bisa baca dan tulis (karena auto-save grafik mengandalkan browser klien)
       ".read": "auth != null",
       ".write": "auth != null"
     },
 
     "laporan": {
-      // Hanya Admin yang bisa melihat daftar semua laporan
       ".read": "auth != null && auth.token.admin === true",
-      // Semua pengguna terautentikasi bisa mengirim laporan
       ".write": "auth != null"
     },
 
     "saran": {
-      // Hanya Admin yang bisa melihat saran
       ".read": "auth != null && auth.token.admin === true",
-      // Semua pengguna terautentikasi bisa mengirim saran
       ".write": "auth != null"
     },
 
     "users": {
-      // Izinkan Admin membaca seluruh daftar pengguna untuk statistik dashboard
       ".read": "auth != null && auth.token.admin === true",
       "$uid": {
-        // Pengguna bisa membaca profilnya sendiri, Admin bisa baca semua
         ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
 
-        // Pengguna bisa update profilnya sendiri (kecuali field sensitif), Admin bisa update semua
         ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
 
         "role": {
-          // [SECURITY] Field 'role' di DB hanya untuk tampilan UI
-          // Otoritas ASLI ada di Firebase Custom Claims (tidak bisa dimanipulasi via DB)
           ".write": "auth != null && auth.token.admin === true"
         },
 
