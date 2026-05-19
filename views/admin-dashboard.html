@@ -140,7 +140,7 @@
 <section class="chart-section glass-panel">
     <div class="history-header">
         <div class="history-title-wrap">
-            <h3>Pengaturan Kalibrasi (OTA)</h3>
+            <h3>Pengaturna Kalibrasi</h3>
             <p>Ubah pengaturan tinggi tangki dan batas peringatan secara nirkabel tanpa memprogram ulang NodeMCU.</p>
         </div>
     </div>
@@ -160,50 +160,6 @@
     </div>
     <button id="btn-save-ota" style="margin-top: 20px; background: var(--brand-primary, #3b82f6); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;">Kalibrasi</button>
     <p id="ota-status-msg" style="margin-top: 10px; font-size: 0.85rem; display: none;"></p>
-</section>
-
-<!-- Built-in IoT Simulator Section -->
-<section class="chart-section glass-panel" style="margin-top: 24px; border-left: 4px solid var(--brand-primary, #3b82f6);">
-    <div class="history-header">
-        <div class="history-title-wrap">
-            <h3 style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.2rem;">⚡</span> 
-                Simulator IoT Terintegrasi (Mode Demonstrasi)
-            </h3>
-            <p>Simulasikan sensor NodeMCU langsung dari browser untuk presentasi atau demonstrasi instan tanpa alat fisik.</p>
-        </div>
-        <!-- Toggle Switch -->
-        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-            <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-secondary, #64748b);">Status Simulasi</span>
-            <label class="switch-sim" style="position: relative; display: inline-block; width: 44px; height: 22px;">
-                <input type="checkbox" id="toggle-sim-mode" style="opacity: 0; width: 0; height: 0;">
-                <span class="slider-sim" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px;"></span>
-            </label>
-        </div>
-    </div>
-    
-    <div id="sim-control-panel" style="display: none; margin-top: 20px;">
-        <div style="background: rgba(59, 130, 246, 0.08); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-            <p style="margin: 0; font-size: 0.85rem; color: #3b82f6; font-weight: 500; line-height: 1.4;">
-                <strong>💡 Info Simulasi:</strong> Saat mode ini aktif, browser Anda akan bertindak sebagai sensor virtual dan terus mengirimkan data ke Firebase setiap 2 detik. Semua diagram dan dashboard akan ter-update secara real-time!
-            </p>
-        </div>
-        
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary);">Ketinggian Air Simulasi</span>
-                    <span id="sim-water-val-display" style="font-size: 0.9rem; font-weight: 800; color: #3b82f6;">0 cm</span>
-                </div>
-                <input type="range" id="sim-water-range" min="0" max="400" value="0" style="width: 100%; height: 6px; border-radius: 5px; background: #e2e8f0; outline: none; cursor: pointer;">
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel-solid, #fff); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0);">
-                <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-secondary);">Status Air Virtual:</span>
-                <span id="sim-water-status-badge" style="font-size: 0.75rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10b981;">AMAN</span>
-            </div>
-        </div>
-    </div>
 </section>
 
 <p class="refresh-time" style="text-align:center;">Sistem Aktif &amp; Terlindungi</p>
@@ -232,43 +188,7 @@
 .history-date-picker { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.85rem; color: #475569; background: #fff; cursor: pointer; transition: 0.2s; }
 .history-date-picker:hover { border-color: var(--brand-primary); }
 
-/* Built-in Switch styling */
-.switch-sim {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 22px;
-}
-.switch-sim input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.slider-sim {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #cbd5e1;
-    transition: .4s;
-    border-radius: 34px;
-}
-.slider-sim:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-.switch-sim input:checked + .slider-sim {
-    background-color: #3b82f6;
-}
-.switch-sim input:checked + .slider-sim:before {
-    transform: translateX(22px);
-}
+
 
 @media (max-width: 600px) {
     .history-header { flex-direction: column; align-items: stretch; }
