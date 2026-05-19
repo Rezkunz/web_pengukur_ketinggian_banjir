@@ -12,6 +12,7 @@ let waterChart;
 let historyChart;
 let currentWaterLevel = 0;
 let chartIntervalTimer = null;
+let lastSavedChartTimestamp = 0; // Menghentikan race condition penyimpanan duplikat
 let currentHistoryRef = null;
 
 let serverTimeOffset = 0;
@@ -289,7 +290,7 @@ function startChartHistoryListener() {
             snapshot.forEach(child => {
                 rawData.push({
                     key: parseInt(child.key),
-                    value: child.val()
+                    value: child.val() !== null && child.val() !== undefined ? Number(child.val()) : null
                 });
             });
 
@@ -341,11 +342,16 @@ function maybeSaveChartPoint(value) {
     if (!database) return;
     if (isSensorOffline) return; // Jangan simpan jika sensor offline
 
+    const now = Date.now();
+    // 1. Cek lokal terlebih dahulu untuk mencegah race condition dari penulisan konkuren cepat
+    if (now - lastSavedChartTimestamp < CHART_INTERVAL_MS) {
+        return; 
+    }
+
     const historyRef = database.ref(CHART_HISTORY_PATH);
 
-    // Ambil entri terakhir untuk cek timestamp-nya
+    // 2. Ambil entri terakhir dari database untuk konfirmasi ganda
     historyRef.orderByKey().limitToLast(1).once('value', (snapshot) => {
-        const now = Date.now();
         let shouldSave = true;
 
         snapshot.forEach(child => {
@@ -355,7 +361,11 @@ function maybeSaveChartPoint(value) {
             }
         });
 
-        if (shouldSave) saveChartPoint(value);
+        if (shouldSave) {
+            // Pasang lock lokal sebelum menulis ke Firebase
+            lastSavedChartTimestamp = now;
+            saveChartPoint(value);
+        }
     });
 }
 
@@ -996,6 +1006,16 @@ function startWeatherListener() {
 function startDataListener() {
     if (!database) return;
 
+    // Inisialisasi lastSavedChartTimestamp dari entri terakhir di database
+    database.ref(CHART_HISTORY_PATH).orderByKey().limitToLast(1).once('value', (snapshot) => {
+        snapshot.forEach(child => {
+            const lastTs = parseInt(child.key);
+            if (!isNaN(lastTs)) {
+                lastSavedChartTimestamp = lastTs;
+            }
+        });
+    });
+
     // Listener Konfigurasi Kalibrasi OTA
     database.ref('sensor_data/config').on('value', (snap) => {
         const conf = snap.val();
@@ -1014,6 +1034,28 @@ function startDataListener() {
 
             // Langsung perbarui UI untuk merespon perubahan batas
             if (currentWaterLevel !== null) updateUI(currentWaterLevel);
+
+            // Update batas maksimum dan garis batas pada grafik secara dinamis
+            if (waterChart) {
+                waterChart.options.scales.y.max = THRESHOLDS.MAX_TANK;
+                waterChart.options.scales.y.ticks.stepSize = Math.ceil(THRESHOLDS.MAX_TANK / 4);
+                waterChart.update();
+            }
+            if (historyChart) {
+                historyChart.options.scales.y.max = THRESHOLDS.MAX_TANK;
+                historyChart.options.scales.y.ticks.stepSize = Math.ceil(THRESHOLDS.MAX_TANK / 4);
+
+                // Hitung ulang warna bar secara dinamis berdasarkan batas baru
+                const hourlyValues = historyChart.data.datasets[0].data || [];
+                const colors = hourlyValues.map(v => {
+                    if (v >= THRESHOLDS.SIAGA2) return 'rgba(239, 68, 68, 0.8)'; // Merah
+                    if (v >= THRESHOLDS.SIAGA1) return 'rgba(245, 158, 11, 0.8)'; // Kuning
+                    return 'rgba(14, 165, 233, 0.6)'; // Biru
+                });
+                historyChart.data.datasets[0].backgroundColor = colors;
+
+                historyChart.update();
+            }
         }
     });
 

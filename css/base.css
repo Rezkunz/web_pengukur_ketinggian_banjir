@@ -278,6 +278,37 @@ body.dark-mode .auth-panel input:focus {
     box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important;
 }
 
+/* Global input fields di dark mode (Dashboard, Kalibrasi OTA, dll) */
+body.dark-mode input[type="text"],
+body.dark-mode input[type="number"],
+body.dark-mode input[type="email"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="date"],
+body.dark-mode .history-date-picker {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+}
+
+body.dark-mode input[type="text"]::placeholder,
+body.dark-mode input[type="number"]::placeholder,
+body.dark-mode input[type="email"]::placeholder,
+body.dark-mode input[type="password"]::placeholder {
+    color: #64748b !important;
+}
+
+body.dark-mode input[type="text"]:focus,
+body.dark-mode input[type="number"]:focus,
+body.dark-mode input[type="email"]:focus,
+body.dark-mode input[type="password"]:focus,
+body.dark-mode input[type="date"]:focus,
+body.dark-mode .history-date-picker:focus {
+    border-color: rgba(14, 165, 233, 0.6) !important;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+    outline: none !important;
+}
+
+
 /* Auth waves di dark mode lebih gelap */
 body.dark-mode .layer-1 { fill: #0369a1; opacity: 0.6; }
 body.dark-mode .layer-2 { fill: #075985; opacity: 0.4; }

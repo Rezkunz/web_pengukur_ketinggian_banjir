@@ -46,6 +46,8 @@ const unsigned long sensorInterval = 80;       // Baca sensor setiap 80ms (Super
 unsigned long lastHeartbeatUpdate = 0;
 const unsigned long heartbeatInterval = 3000;  // Kirim detak jantung setiap 3 detik jika air tenang
 unsigned long lastFirebaseTxTime = 0;          // Catat waktu kirim WiFi terakhir untuk cooldown tegangan
+unsigned long lastOtaCheck = 0;
+const unsigned long otaInterval = 15000;       // Cek OTA setiap 15 detik (mengambil konfigurasi terbaru)
 
 void setup() {
   Serial.begin(115200); 
@@ -137,6 +139,39 @@ void loop() {
       lastFirebaseTxTime = millis(); // Catat waktu kirim heartbeat juga
     }
     lastHeartbeatUpdate = millis();
+  }
+
+  // 4. Update konfigurasi OTA secara berkala (setiap 15 detik)
+  if (millis() - lastOtaCheck >= otaInterval) {
+    lastOtaCheck = millis();
+    bool updated = false;
+
+    if (Firebase.getInt(fbdo, "/sensor_data/config/max_height")) {
+      int new_H = fbdo.intData();
+      if (new_H != H) {
+        H = new_H;
+        updated = true;
+      }
+    }
+    if (Firebase.getInt(fbdo, "/sensor_data/config/siaga1")) {
+      int new_s1 = fbdo.intData();
+      if (new_s1 != LEVEL_SIAGA1) {
+        LEVEL_SIAGA1 = new_s1;
+        updated = true;
+      }
+    }
+    if (Firebase.getInt(fbdo, "/sensor_data/config/siaga2")) {
+      int new_s2 = fbdo.intData();
+      if (new_s2 != LEVEL_SIAGA2) {
+        LEVEL_SIAGA2 = new_s2;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      Serial.println("Konfigurasi OTA Diperbarui secara Real-time!");
+      baca_level(); // Segera hitung ulang & kirim ke Firebase/LCD jika ada perubahan
+    }
   }
 }
 
