@@ -1,8 +1,8 @@
 // Water Monitoring and Charting Logic
-const THRESHOLDS = {
-    SIAGA1: 200, // 2 meter = Siaga 1 (Waspada) → Kuning
-    SIAGA2: 300, // 3 meter = Siaga 2 (Bahaya)  → Merah
-    MAX_TANK: 400 // 4 meter = Ketinggian Maksimal Tangki
+let THRESHOLDS = {
+    SIAGA1: 200, // Default Waspada
+    SIAGA2: 300, // Default Bahaya
+    MAX_TANK: 400 // Default Maksimal Tangki
 };
 
 let lastNotifState = 'AMAN';
@@ -14,9 +14,11 @@ let currentWaterLevel = 0;
 let chartIntervalTimer = null;
 let currentHistoryRef = null;
 
+let serverTimeOffset = 0;
+
 // Sensor Offline Detection Logic (20s polling)
-const POLL_INTERVAL_MS = 3 * 1000; // Cek setiap 3 detik
-const POLL_GAP_MS      = 1000;     // Jeda 1 detik antar sampel
+const POLL_INTERVAL_MS = 5 * 1000; // Cek setiap 5 detik
+const POLL_GAP_MS      = 2500;     // Jeda 2.5 detik antar sampel (menghindari false offline)
 let offlinePollTimer   = null;
 let isSensorOffline    = false;
 let lastOfflineCheckAt = null;
@@ -254,25 +256,23 @@ function saveHourlyData(value) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // [SECURITY] Gunakan Custom Claims, bukan role dari database
-    checkUserRole(user).then(isAdmin => {
-        if (!isAdmin) return;
+    // Semua user klien (termasuk non-admin) diizinkan untuk auto-save data history
+    // karena tidak ada server backend khusus yang menyimpan grafik per jam.
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const hour = now.getHours();
 
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        const hour = now.getHours();
+    const path = `history/${dateStr}/${hour}`;
+    database.ref(path).once('value', (s) => {
+        if (!s.exists()) {
+            database.ref(path).set(Math.round(value));
 
-        const path = `history/${dateStr}/${hour}`;
-        database.ref(path).once('value', (s) => {
-            if (!s.exists()) {
-                database.ref(path).set(Math.round(value));
-
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 31);
-                const oldDateStr = thirtyDaysAgo.toISOString().split('T')[0];
-                database.ref(`history/${oldDateStr}`).remove();
-            }
-        });
+            // Hapus data yang usianya lebih dari 30 hari agar database tidak penuh
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 31);
+            const oldDateStr = thirtyDaysAgo.toISOString().split('T')[0];
+            database.ref(`history/${oldDateStr}`).remove();
+        }
     });
 }
 
@@ -321,23 +321,20 @@ function saveChartPoint(value) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // [SECURITY] Gunakan Custom Claims, bukan role dari database
-    checkUserRole(user).then(isAdmin => {
-        if (!isAdmin) return;
+    // Semua user klien (termasuk non-admin) diizinkan auto-save titik grafik
+    const historyRef = database.ref(CHART_HISTORY_PATH);
+    const now = Date.now();
 
-        const historyRef = database.ref(CHART_HISTORY_PATH);
-        const now = Date.now();
-
-        historyRef.child(now.toString()).set(Math.round(value))
-            .then(() => historyRef.orderByKey().once('value'))
-            .then((snap) => {
-                const keys = [];
-                snap.forEach(child => keys.push(child.key));
-                const toDelete = keys.slice(0, Math.max(0, keys.length - CHART_MAX_POINTS));
-                return Promise.all(toDelete.map(key => historyRef.child(key).remove()));
-            })
-            .catch(err => console.warn('Gagal menyimpan riwayat grafik:', err));
-    });
+    historyRef.child(now.toString()).set(Math.round(value))
+        .then(() => historyRef.orderByKey().once('value'))
+        .then((snap) => {
+            const keys = [];
+            snap.forEach(child => keys.push(child.key));
+            // Batasi jumlah titik maksimal (misal: 8 titik)
+            const toDelete = keys.slice(0, Math.max(0, keys.length - CHART_MAX_POINTS));
+            return Promise.all(toDelete.map(key => historyRef.child(key).remove()));
+        })
+        .catch(err => console.warn('Gagal menyimpan riwayat grafik:', err));
 }
 
 function maybeSaveChartPoint(value) {
@@ -380,6 +377,42 @@ function calculatePercentage(currentValue, maxValue) {
     return percentage;
 }
 
+// Helper to animate numbers smoothly using requestAnimationFrame
+function animateValue(element, target, duration = 800) {
+    if (!element) return;
+    
+    let start = parseInt(element.textContent, 10);
+    if (isNaN(start)) start = 0;
+    
+    if (start === target) return;
+    
+    if (element.dataset.animationFrameId) {
+        cancelAnimationFrame(parseInt(element.dataset.animationFrameId, 10));
+    }
+    
+    const startTime = performance.now();
+    
+    function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing: easeOutCubic
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (target - start) * ease);
+        
+        element.textContent = current;
+        
+        if (progress < 1) {
+            element.dataset.animationFrameId = requestAnimationFrame(update);
+        } else {
+            element.textContent = target;
+            delete element.dataset.animationFrameId;
+        }
+    }
+    
+    element.dataset.animationFrameId = requestAnimationFrame(update);
+}
+
 function updateUI(waterLevel) {
     if (!auth || !auth.currentUser) return;
 
@@ -387,12 +420,13 @@ function updateUI(waterLevel) {
     const waterFillEl = document.getElementById('water-fill');
     const alertPanelEl = document.getElementById('alert-panel');
     const alertMessageEl = document.getElementById('alert-message');
+    const alertIconEl = document.getElementById('alert-icon');
     const lastUpdateEl = document.getElementById('last-update');
     const adminStatusAir = document.getElementById('admin-status-air');
     const adminSensorTime = document.getElementById('admin-sensor-time');
 
     if (currentLevelEl) {
-        currentLevelEl.textContent = Math.round(waterLevel);
+        animateValue(currentLevelEl, Math.round(waterLevel), 800);
     }
 
     const percentage = calculatePercentage(waterLevel, THRESHOLDS.MAX_TANK);
@@ -401,6 +435,10 @@ function updateUI(waterLevel) {
     if (waterFillEl) {
         // Hapus semua class status lama
         waterFillEl.classList.remove('status-aman', 'status-siaga1', 'status-siaga2');
+    }
+
+    if (alertPanelEl) {
+        alertPanelEl.classList.remove('status-aman', 'status-siaga1', 'status-siaga2', 'status-offline');
     }
 
     // Helper: set warna ombak langsung ke elemen SVG (CSS var tidak reliabel di SVG)
@@ -426,6 +464,15 @@ function updateUI(waterLevel) {
             alertMessageEl.textContent = 'SIAGA 2 (Bahaya!)';
             alertMessageEl.style.color = 'var(--status-siaga2)';
         }
+        if (alertIconEl) {
+            alertIconEl.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            `;
+        }
         if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 2'; adminStatusAir.style.color = 'var(--status-siaga2)'; }
         currentState = 'SIAGA2';
     } else if (waterLevel >= THRESHOLDS.SIAGA1) {
@@ -440,6 +487,15 @@ function updateUI(waterLevel) {
             alertMessageEl.textContent = 'SIAGA 1 (Waspada)';
             alertMessageEl.style.color = 'var(--status-siaga1)';
         }
+        if (alertIconEl) {
+            alertIconEl.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+        }
         if (adminStatusAir) { adminStatusAir.textContent = 'SIAGA 1'; adminStatusAir.style.color = 'var(--status-siaga1)'; }
         currentState = 'SIAGA1';
     } else {
@@ -451,6 +507,14 @@ function updateUI(waterLevel) {
         setWaveColors('rgba(255,255,255,0.38)', 'rgba(255,255,255,0.22)');
         if (alertPanelEl) alertPanelEl.classList.add('status-aman');
         if (alertMessageEl) { alertMessageEl.textContent = 'Aman'; alertMessageEl.style.color = 'var(--status-aman)'; }
+        if (alertIconEl) {
+            alertIconEl.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            `;
+        }
         if (adminStatusAir) { adminStatusAir.textContent = 'Aman'; adminStatusAir.style.color = 'var(--status-aman)'; }
         currentState = 'AMAN';
     }
@@ -556,10 +620,26 @@ function updateOfflineUI(offline, sinceText, reason) {
     // ── Alert panel saat offline ──
     const alertPanel   = document.getElementById('alert-panel');
     const alertMessage = document.getElementById('alert-message');
+    const alertIcon    = document.getElementById('alert-icon');
     if (offline && alertPanel && alertMessage) {
         alertPanel.className = 'alert-section glass-panel status-offline';
         alertMessage.textContent = 'Sensor Offline';
         alertMessage.style.color = '#888';
+        if (alertIcon) {
+            alertIcon.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.5"></path>
+                    <path d="M5 12.5a10.94 10.94 0 0 1 5.83-2.84"></path>
+                    <path d="M8.53 5.46a16.37 16.37 0 0 1 7-1.46"></path>
+                    <path d="M1.63 7.21a16.59 16.59 0 0 1 2.87-1.75"></path>
+                    <circle cx="12" cy="20" r="1"></circle>
+                </svg>
+            `;
+        }
+    } else if (!offline && alertPanel) {
+        // Jika kembali online, jalankan updateUI untuk menampilkan data terbaru dan ikon status yang sesuai
+        updateUI(currentWaterLevel);
     }
 
     // ── Chart offline overlays ──
@@ -601,53 +681,27 @@ async function pollSensorStatus() {
     if (!database) return;
 
     try {
-        // ── Strategi 1: gunakan sensor_data/ts jika ada ──
-        // ts dikirim NodeMCU tiap 0.5 detik (millis/1000), selalu berubah
-        const snap1ts = await database.ref('sensor_data/ts').once('value');
-        const ts1     = snap1ts.val();
+        // Ambil timestamp terakhir dari Firebase
+        const snap = await database.ref('sensor_data/ts').once('value');
+        const ts = snap.val();
 
-        // Jika ts belum ada (NodeMCU belum di-flash ulang),
-        // gunakan water_level sebagai fallback
-        const path = (ts1 !== null) ? 'sensor_data/ts' : 'sensor_data/water_level';
+        lastOfflineCheckAt = Date.now();
 
-        // Sampel pertama
-        const snap1 = await database.ref(path).once('value');
-        const val1  = snap1.val();
-
-        // Jika path juga null, tidak ada data apapun di Firebase
-        if (val1 === null) {
-            lastOfflineCheckAt = Date.now();
+        if (ts === null) {
+            // Fallback jika belum ada data sama sekali di database
             setOfflineState(true, 'Belum ada data sensor di database');
             return;
         }
 
-        // Tunggu jeda: lebih lama jika pakai water_level (bisa konstan)
-        const gap = (ts1 !== null) ? POLL_GAP_MS : 10000; // 2 detik vs 10 detik
-        await new Promise(r => setTimeout(r, gap));
+        // Hitung selisih waktu antara Firebase Server Time dengan timestamp terakhir
+        const serverTime = Date.now() + serverTimeOffset;
+        const diff = serverTime - ts;
 
-        // Sampel kedua
-        const snap2 = await database.ref(path).once('value');
-        const val2  = snap2.val();
+        // Toleransi toleran 20 detik (mengakomodasi interval heartbeat 3 detik + jeda transmisi WiFi)
+        // Menjamin tidak akan ada false offline (notif kedap-kedip) karena gangguan jaringan kecil.
+        const isOffline = (diff > 20 * 1000);
 
-        lastOfflineCheckAt = Date.now();
-
-        if (val2 === null) {
-            setOfflineState(true, 'Data sensor hilang dari database');
-            return;
-        }
-
-        if (ts1 !== null) {
-            // Mode ts: nilai HARUS berubah dalam POLL_GAP_MS jika sensor aktif
-            const isReallyOffline = (val1 === val2);
-            // Jika offline, gunakan nilai 'val2' (timestamp dari server) sebagai waktu mulai mati
-            setOfflineState(isReallyOffline, null, isReallyOffline ? val2 : null);
-        } else {
-            // Mode water_level: nilai mungkin konstan walau sensor aktif.
-            // Jangan tampilkan offline hanya karena level sama.
-            // Cukup tandai online selama data ada di database.
-            setOfflineState(false);
-            console.info('ℹ️ Mode fallback: ts belum ada. Upload kode NodeMCU terbaru untuk deteksi offline yang akurat.');
-        }
+        setOfflineState(isOffline, null, isOffline ? ts : null);
 
     } catch (err) {
         console.warn('⚠️ Gagal polling sensor status:', err.message);
@@ -942,6 +996,61 @@ function startWeatherListener() {
 function startDataListener() {
     if (!database) return;
 
+    // Listener Konfigurasi Kalibrasi OTA
+    database.ref('sensor_data/config').on('value', (snap) => {
+        const conf = snap.val();
+        if (conf) {
+            THRESHOLDS.MAX_TANK = conf.max_height || 400;
+            THRESHOLDS.SIAGA1 = conf.siaga1 || 200;
+            THRESHOLDS.SIAGA2 = conf.siaga2 || 300;
+            
+            // Isi form OTA admin jika ada dan sedang tidak diketik
+            const inH = document.getElementById('ota-max-height');
+            if (inH && document.activeElement !== inH) {
+                inH.value = conf.max_height;
+                document.getElementById('ota-siaga1').value = conf.siaga1;
+                document.getElementById('ota-siaga2').value = conf.siaga2;
+            }
+
+            // Langsung perbarui UI untuk merespon perubahan batas
+            if (currentWaterLevel !== null) updateUI(currentWaterLevel);
+        }
+    });
+
+    // Handle Simpan OTA
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'btn-save-ota') {
+            const maxH = parseInt(document.getElementById('ota-max-height').value);
+            const s1 = parseInt(document.getElementById('ota-siaga1').value);
+            const s2 = parseInt(document.getElementById('ota-siaga2').value);
+            const msg = document.getElementById('ota-status-msg');
+            
+            if (!maxH || !s1 || !s2) {
+                msg.textContent = 'Harap isi semua kolom dengan angka!';
+                msg.style.color = 'red';
+                msg.style.display = 'block';
+                return;
+            }
+            
+            msg.textContent = 'Mengirim perintah kalibrasi OTA...';
+            msg.style.color = '#3b82f6';
+            msg.style.display = 'block';
+            
+            database.ref('sensor_data/config').set({
+                max_height: maxH,
+                siaga1: s1,
+                siaga2: s2
+            }).then(() => {
+                msg.textContent = 'Kalibrasi berhasil! NodeMCU & Web sudah beradaptasi.';
+                msg.style.color = 'green';
+                setTimeout(() => msg.style.display = 'none', 5000);
+            }).catch(err => {
+                msg.textContent = 'Gagal mengirim OTA: ' + err.message;
+                msg.style.color = 'red';
+            });
+        }
+    });
+
     // 0. Mulai fetch cuaca
     startWeatherListener();
 
@@ -960,21 +1069,27 @@ function startDataListener() {
         const data = snapshot.val();
         if (data === null) return;
 
-        currentWaterLevel = data;
+        const finalLevel = Number(data);
+        currentWaterLevel = finalLevel;
         
         // Langsung set ONLINE jika data masuk
         if (isSensorOffline) setOfflineState(false);
         
-        updateUI(data);
+        updateUI(finalLevel);
 
         // Hanya simpan data jika sensor online
         if (!isSensorOffline) {
             // 5. Smart save chart (maks 1x per 15 menit)
-            maybeSaveChartPoint(data);
+            maybeSaveChartPoint(finalLevel);
             
             // 6. Hourly data save (Mencatat setiap jam)
-            saveHourlyData(data);
+            saveHourlyData(finalLevel);
         }
+    });
+
+    // 5. Sync Firebase Server Time Offset
+    database.ref('.info/serverTimeOffset').on('value', (snap) => {
+        serverTimeOffset = snap.val() || 0;
     });
 
     // 6. Real-time listener untuk sinkronisasi status offline awal
@@ -982,12 +1097,12 @@ function startDataListener() {
         const ts = snap.val();
         if (!ts) return;
 
-        const now = Date.now();
-        const diff = now - ts;
+        const serverTime = Date.now() + serverTimeOffset;
+        const diff = serverTime - ts;
 
-        // Jika data di DB sudah lebih dari 10 detik yang lalu, 
-        // berarti saat ini sensor sudah offline
-        if (diff > 10 * 1000) {
+        // Jika data di DB sudah lebih dari 20 detik yang lalu, 
+        // berarti saat ini sensor sudah offline (menggunakan server time synced dengan toleransi 20 detik)
+        if (diff > 20 * 1000) {
             setOfflineState(true, null, ts);
         } else {
             if (isSensorOffline) setOfflineState(false);

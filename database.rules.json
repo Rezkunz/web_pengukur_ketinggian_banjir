@@ -5,17 +5,36 @@
     ".write": false,
 
     "sensor_data": {
-      // [SECURITY] Hanya pengguna terautentikasi yang TERDAFTAR di sistem yang bisa membaca.
-      // Ini menyelesaikan peringatan Firebase: user harus ada di /users (bukan hanya login dengan email sembarang).
+      // Hanya pengguna terautentikasi yang TERDAFTAR di sistem yang bisa membaca.
       ".read": "auth != null && (auth.token.admin === true || root.child('users').child(auth.uid).exists())",
-      // Hanya Admin (Custom Claims) atau Device IoT yang bisa menulis data sensor
-      ".write": "auth != null && (auth.token.admin === true || auth.token.email === 'device@safe.id')"
+      
+      // Default write ditolak, diatur spesifik per anak
+      ".write": false,
+
+      "water_level": {
+        // Hanya Admin atau IoT Device yang bisa memanipulasi sensor utama
+        ".write": "auth != null && (auth.token.admin === true || auth.token.email === 'device@safe.id')"
+      },
+      "ts": {
+        ".write": "auth != null && (auth.token.admin === true || auth.token.email === 'device@safe.id')"
+      },
+      "last_notification": {
+        ".write": "auth != null && (auth.token.admin === true || auth.token.email === 'device@safe.id')"
+      },
+      "config": {
+        // Hanya Admin yang bisa mengubah konfigurasi OTA
+        ".write": "auth != null && auth.token.admin === true"
+      },
+      "chart_history": {
+        // Semua klien bisa auto-save grafik riwayat real-time
+        ".write": "auth != null"
+      }
     },
 
     "history": {
-      // Hanya Admin yang bisa baca history
-      ".read": "auth != null && auth.token.admin === true",
-      ".write": "auth != null && auth.token.admin === true"
+      // Semua pengguna terautentikasi bisa baca dan tulis (karena auto-save grafik mengandalkan browser klien)
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
 
     "laporan": {

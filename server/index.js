@@ -73,8 +73,8 @@ const messaging = admin.messaging();
 
 console.log("Menghubungkan ke Firebase Database...");
 
-const LEVEL_SIAGA1 = 200;
-const LEVEL_SIAGA2 = 300;
+let LEVEL_SIAGA1 = 200;
+let LEVEL_SIAGA2 = 300;
 let currentStatus = "Aman";
 let lastNotificationTime = 0;
 const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 Jam jeda minimal untuk pengingat (Reminder)
@@ -83,6 +83,16 @@ const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 Jam jeda minimal untuk pengingat (R
 async function startNotificationBot() {
     console.log("Mengambil status notifikasi terakhir dari database...");
     
+    // Listener Konfigurasi OTA
+    db.ref('sensor_data/config').on('value', (snap) => {
+        const conf = snap.val();
+        if (conf) {
+            LEVEL_SIAGA1 = conf.siaga1 || 200;
+            LEVEL_SIAGA2 = conf.siaga2 || 300;
+            console.log(`[Config Update] Ambang Batas Berubah: Siaga 1 (${LEVEL_SIAGA1}cm), Siaga 2 (${LEVEL_SIAGA2}cm)`);
+        }
+    });
+
     try {
         const lastNotifSnap = await db.ref('sensor_data/last_notification').once('value');
         const lastNotif = lastNotifSnap.val();

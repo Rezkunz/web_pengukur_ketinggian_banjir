@@ -120,6 +120,32 @@
     </div>
 </section>
 
+<!-- OTA Calibration Section -->
+<section class="chart-section glass-panel">
+    <div class="history-header">
+        <div class="history-title-wrap">
+            <h3>Pengaturan Kalibrasi (OTA)</h3>
+            <p>Ubah pengaturan tinggi tangki dan batas peringatan secara nirkabel tanpa memprogram ulang NodeMCU.</p>
+        </div>
+    </div>
+    <div class="ota-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+        <div class="input-group">
+            <label for="ota-max-height" style="font-size: 0.8rem; color: #64748b; font-weight: bold;">Tinggi Tangki Maksimal (cm)</label>
+            <input type="number" id="ota-max-height" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 5px;">
+        </div>
+        <div class="input-group">
+            <label for="ota-siaga1" style="font-size: 0.8rem; color: #64748b; font-weight: bold;">Batas Siaga 1 (cm)</label>
+            <input type="number" id="ota-siaga1" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 5px;">
+        </div>
+        <div class="input-group">
+            <label for="ota-siaga2" style="font-size: 0.8rem; color: #64748b; font-weight: bold;">Batas Siaga 2 (cm)</label>
+            <input type="number" id="ota-siaga2" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 5px;">
+        </div>
+    </div>
+    <button id="btn-save-ota" style="margin-top: 20px; background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;">Terapkan Kalibrasi</button>
+    <p id="ota-status-msg" style="margin-top: 10px; font-size: 0.85rem; display: none;"></p>
+</section>
+
 <p class="refresh-time" style="text-align:center;">Sistem Aktif &amp; Terlindungi</p>
 
 <style>

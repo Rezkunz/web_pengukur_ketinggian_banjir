@@ -21,10 +21,31 @@ FirebaseData fbdo;
 FirebaseAuth auth_fb;
 FirebaseConfig config_fb;
 
-unsigned long lastFirebaseUpdate = 0;
-const unsigned long firebaseInterval = 1000; // Dikurangi ke 1 detik agar lebih stabil
+// Inisialisasi Perangkat
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+const int trigPin = 14; // Pin D5 pada NodeMCU
+const int echoPin = 12; // Pin D6 pada NodeMCU
 
-// ... (Inisialisasi LCD dan Pin tetap sama) ...
+#define SOUND_VELOCITY 0.034
+long duration;
+int d_cm;
+int H = 400;          // Default Tinggi tangki, akan di-overwrite oleh OTA
+int level;            // Tinggi air dalam cm = H - d_cm (sensor menghadap ke BAWAH)
+int s1 = 0, s2 = 0; 
+String status;
+
+// Variabel Ambang Ketinggian Air OTA (Default Pengmas, akan di-overwrite oleh OTA)
+int LEVEL_SIAGA1 = 200; 
+int LEVEL_SIAGA2 = 300; 
+
+void baca_level();
+
+// Timer & Variabel Filter Penstabil Sinyal
+unsigned long lastSensorRead = 0;
+const unsigned long sensorInterval = 80;       // Baca sensor setiap 80ms (Super Real-time & Responsif)
+unsigned long lastHeartbeatUpdate = 0;
+const unsigned long heartbeatInterval = 3000;  // Kirim detak jantung setiap 3 detik jika air tenang
+unsigned long lastFirebaseTxTime = 0;          // Catat waktu kirim WiFi terakhir untuk cooldown tegangan
 
 void setup() {
   Serial.begin(115200); 
@@ -53,17 +74,30 @@ void setup() {
   // Inisialisasi Firebase SECURE (Email/Password)
   lcd.clear();
   lcd.print("Auth Firebase...");
-  config_fb.host = FIREBASE_HOST;
+  
+  // WAJIB panggil ini SEBELUM Firebase.begin() untuk mencegah Crash/Mentok karena kehabisan RAM!
+  fbdo.setBSSLBufferSize(1024, 1024);
+  
+  config_fb.database_url = FIREBASE_HOST;
   config_fb.api_key = FIREBASE_API_KEY;
   auth_fb.user.email = DEVICE_EMAIL;
   auth_fb.user.password = DEVICE_PASSWORD;
   
   Firebase.begin(&config_fb, &auth_fb);
-
-  
-  // Batasi SSL Buffer Firebase
-  fbdo.setBSSLBufferSize(1024, 1024);
   Firebase.reconnectWiFi(true); 
+
+  // --- DOWNLOAD KONFIGURASI OTA (Over-The-Air) DARI FIREBASE ---
+  lcd.clear();
+  lcd.print("Kalibrasi OTA...");
+  if (Firebase.getInt(fbdo, "/sensor_data/config/max_height")) {
+      H = fbdo.intData();
+  }
+  if (Firebase.getInt(fbdo, "/sensor_data/config/siaga1")) {
+      LEVEL_SIAGA1 = fbdo.intData();
+  }
+  if (Firebase.getInt(fbdo, "/sensor_data/config/siaga2")) {
+      LEVEL_SIAGA2 = fbdo.intData();
+  }
   
   lcd.clear();
   lcd.print("Level=");
@@ -71,24 +105,38 @@ void setup() {
   lcd.print("Status:");
 }
 
+int lastSentLevel = -999;
+String lastStatus = "";
+
 void loop() { 
   yield(); // Beri napas pada ESP8266 agar terhindar dari WDT Reset
 
-  // 1. Update bacaan sensor secara terus menerus ke variabel
-  baca_level(); 
-  
-  // 2. Update data ke Firebase DB Web
-  if (millis() - lastFirebaseUpdate >= firebaseInterval) {
-    if(d_cm > 0) {
-      Firebase.setInt(fbdo, "/sensor_data/water_level", level);
-    }
+  // 1. Baca sensor setiap 80ms, HANYA jika tegangan sudah stabil (minimal 150ms setelah transmisi WiFi terakhir)
+  if (millis() - lastSensorRead >= sensorInterval && millis() - lastFirebaseTxTime >= 150) {
+    baca_level(); 
+    lastSensorRead = millis();
     
-    // Heartbeat: Mengirim Server Timestamp agar web tahu kapan alat terakhir aktif secara persisten
+    // Cek apakah status siaga berubah (aman/siaga1/siaga2)
+    bool statusChanged = (status != lastStatus);
+
+    // 2. TRUE REAL-TIME: Kirim instan jika ketinggian berubah (meski 1cm) agar LCD & Web selalu sinkron 100%!
+    if (d_cm > 0 && level != lastSentLevel) {
+      if (Firebase.setInt(fbdo, "/sensor_data/water_level", level)) {
+        lastSentLevel = level;
+        lastStatus = status;
+        lastFirebaseTxTime = millis(); // Catat waktu kirim untuk cooldown tegangan sensor
+      }
+    }
+  }
+  
+  // 3. Heartbeat berkala agar web tahu alat tetap aktif (online)
+  if (millis() - lastHeartbeatUpdate >= heartbeatInterval) {
     FirebaseJson json;
     json.set(".sv", "timestamp");
-    Firebase.set(fbdo, "/sensor_data/ts", json);
-    
-    lastFirebaseUpdate = millis();
+    if (Firebase.set(fbdo, "/sensor_data/ts", json)) {
+      lastFirebaseTxTime = millis(); // Catat waktu kirim heartbeat juga
+    }
+    lastHeartbeatUpdate = millis();
   }
 }
 
@@ -104,24 +152,40 @@ int ukur_satu() {
 }
 
 void baca_level() {
-    // Ambil 3 sampel cepat (~9ms total), lalu ambil median
-    int a = ukur_satu(); delay(3);
-    int b = ukur_satu(); delay(3);
+    // Ambil 3 sampel cepat dengan jeda 50ms agar pantulan gelombang (echo) sebelumnya hilang (Minimal 60ms siklus disarankan datasheet HC-SR04)
+    int a = ukur_satu(); delay(50);
+    int b = ukur_satu(); delay(50);
     int c = ukur_satu();
 
-    // Sort 3 nilai (bubble sort mini)
+    // Sort 3 nilai (bubble sort mini untuk mengambil nilai median tengah)
     if(a > b) { int t=a; a=b; b=t; }
     if(b > c) { int t=b; b=c; c=t; }
     if(a > b) { int t=a; a=b; b=t; }
-    int median_cm = b; // Nilai tengah = median
+    int median_cm = b;
 
     // Abaikan jika timeout (0) atau di luar jangkauan sensor
     if(median_cm <= 0 || median_cm > 400) return;
 
     // Simpan hasil ke variabel global
     d_cm = median_cm;
-    level = H - d_cm;
-    if (level < 0) level = 0;
+    int raw_level = H - d_cm;
+    if (raw_level < 0) raw_level = 0;
+
+    // Smart Adaptive Filter (Sangat Real-time & Stabil)
+    static float smoothed_level = -1.0;
+    if (smoothed_level < 0) {
+        smoothed_level = raw_level;
+    } else {
+        float diff = abs(raw_level - smoothed_level);
+        if (diff >= 3.0) {
+            // Perubahan drastis (misal ditutup tangan): Langsung lompat ke target INSTAN 100% tanpa delay lambat!
+            smoothed_level = raw_level;
+        } else {
+            // Fluktuasi kecil 1-2 cm (riak air): Saring perlahan agar angka tetap kokoh dan diam
+            smoothed_level = (0.3 * raw_level) + (0.7 * smoothed_level);
+        }
+    }
+    level = (int)(smoothed_level + 0.5);
 
     // LCD baris 1: tampilkan level (tinggi air)
     lcd.setCursor(6,0);
