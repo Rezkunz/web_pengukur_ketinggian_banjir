@@ -1139,6 +1139,19 @@ body.dark-mode .temp-max { color: #e2e8f0 !important; }
    ===================================================== */
 @media (max-width: 767px) {
 
+    .chart-header-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
+    .history-date-input {
+        width: auto !important;
+        max-width: 160px !important;
+        padding: 5px 8px !important;
+        font-size: 0.8rem !important;
+    }
+
     /* ── Water Section: lebih compact ── */
     .water-container {
         min-height: 220px !important;

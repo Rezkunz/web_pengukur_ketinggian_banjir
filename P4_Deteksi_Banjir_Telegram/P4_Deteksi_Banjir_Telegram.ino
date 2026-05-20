@@ -56,6 +56,8 @@ int sampleIdx = 0;
 // Throttling Firebase (Mencegah spam write fluktuasi kecil)
 unsigned long lastFirebaseWrite = 0;
 const unsigned long firebaseWriteInterval = 1500; // Kirim fluktuasi kecil maksimal tiap 1.5 detik
+unsigned long lastFirebaseLevelWrite = 0;
+const unsigned long firebaseForceWriteInterval = 300000; // Force write level minimal setiap 5 menit (300,000 ms)
 
 int ukur_satu(); // Deklarasi fungsi ukur
 
@@ -159,14 +161,16 @@ void loop() {
       bool statusChanged = (status != lastStatus);
       bool levelChangedSignificantly = (abs(level - lastSentLevel) >= 3);
       bool timeToUpdate = (millis() - lastFirebaseWrite >= firebaseWriteInterval);
+      bool forceWrite = (millis() - lastFirebaseLevelWrite >= firebaseForceWriteInterval);
       
       // 2. SMART ADAPTIVE REPORTING: Kirim instan jika status berubah atau level berubah drastis,
-      //    tapi batasi (throttle) fluktuasi kecil agar tidak memblokir CPU.
-      if (level != lastSentLevel && (statusChanged || levelChangedSignificantly || timeToUpdate)) {
+      //    atau jika sudah lama tidak kirim (forceWrite) agar grafik tidak macet saat tenang.
+      if ((level != lastSentLevel && (statusChanged || levelChangedSignificantly || timeToUpdate)) || forceWrite) {
         if (Firebase.setInt(fbdo, "/sensor_data/water_level", level)) {
           lastSentLevel = level;
           lastStatus = status;
           lastFirebaseWrite = millis();
+          lastFirebaseLevelWrite = millis();
           lastFirebaseTxTime = millis(); // Catat waktu transmisi WiFi
         }
       }

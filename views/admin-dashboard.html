@@ -78,7 +78,7 @@
 
 <!-- Real-time Chart -->
 <section class="chart-section glass-panel">
-    <h3>Grafik Ketinggian Air Terpusat (Real-time)</h3>
+    <h3>Grafik Ketinggian Air Realtime</h3>
     <div class="chart-container" style="position: relative;">
         <canvas id="adminWaterChart"></canvas>
         <!-- Offline Overlay -->
@@ -140,25 +140,25 @@
 <section class="chart-section glass-panel">
     <div class="history-header">
         <div class="history-title-wrap">
-            <h3>Pengaturna Kalibrasi</h3>
+            <h3>Pengaturan Kalibrasi</h3>
             <p>Ubah pengaturan tinggi tangki dan batas peringatan secara nirkabel tanpa memprogram ulang NodeMCU.</p>
         </div>
     </div>
-    <div class="ota-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+    <div class="ota-form-grid">
         <div class="input-group">
-            <label for="ota-max-height" style="font-size: 0.8rem; color: var(--text-secondary, #64748b); font-weight: bold;">Tinggi Tangki Maksimal (cm)</label>
-            <input type="number" id="ota-max-height" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0); background: var(--bg-panel-solid, #fff); color: var(--text-primary, #0f172a); margin-top: 5px;">
+            <label for="ota-max-height">Tinggi Tangki Maksimal (cm)</label>
+            <input type="number" id="ota-max-height">
         </div>
         <div class="input-group">
-            <label for="ota-siaga1" style="font-size: 0.8rem; color: var(--text-secondary, #64748b); font-weight: bold;">Batas Siaga 1 (cm)</label>
-            <input type="number" id="ota-siaga1" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0); background: var(--bg-panel-solid, #fff); color: var(--text-primary, #0f172a); margin-top: 5px;">
+            <label for="ota-siaga1">Batas Siaga 1 (cm)</label>
+            <input type="number" id="ota-siaga1">
         </div>
         <div class="input-group">
-            <label for="ota-siaga2" style="font-size: 0.8rem; color: var(--text-secondary, #64748b); font-weight: bold;">Batas Siaga 2 (cm)</label>
-            <input type="number" id="ota-siaga2" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0); background: var(--bg-panel-solid, #fff); color: var(--text-primary, #0f172a); margin-top: 5px;">
+            <label for="ota-siaga2">Batas Siaga 2 (cm)</label>
+            <input type="number" id="ota-siaga2">
         </div>
     </div>
-    <button id="btn-save-ota" style="margin-top: 20px; background: var(--brand-primary, #3b82f6); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;">Kalibrasi</button>
+    <button id="btn-save-ota">Kalibrasi</button>
     <p id="ota-status-msg" style="margin-top: 10px; font-size: 0.85rem; display: none;"></p>
 </section>
 
@@ -188,10 +188,63 @@
 .history-date-picker { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.85rem; color: #475569; background: #fff; cursor: pointer; transition: 0.2s; }
 .history-date-picker:hover { border-color: var(--brand-primary); }
 
+.ota-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+}
+.ota-form-grid .input-group {
+    display: flex;
+    flex-direction: column;
+}
+.ota-form-grid label {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #64748b);
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.ota-form-grid input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-panel-solid, #fff);
+    color: var(--text-primary, #0f172a);
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ota-form-grid input:focus {
+    border-color: var(--brand-primary, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+#btn-save-ota {
+    margin-top: 20px;
+    background: var(--brand-primary, #3b82f6);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+#btn-save-ota:hover {
+    opacity: 0.9;
+}
 
-
-@media (max-width: 600px) {
-    .history-header { flex-direction: column; align-items: stretch; }
-    .history-date-picker { width: 100%; }
+@media (max-width: 767px) {
+    .history-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .history-date-picker { width: auto; max-width: 180px; padding: 6px 10px; font-size: 0.8rem; }
+    .ota-form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    #btn-save-ota {
+        width: 100%;
+    }
 }
 </style>

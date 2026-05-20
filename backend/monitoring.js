@@ -10,10 +10,12 @@ let lastNotifState = 'AMAN';
 // Chart & Global State
 let waterChart;
 let historyChart;
-let currentWaterLevel = 0;
+let currentWaterLevel = null;
 let chartIntervalTimer = null;
 let lastSavedChartTimestamp = 0; // Menghentikan race condition penyimpanan duplikat
 let currentHistoryRef = null;
+let chartHistoryData = [];
+let chartHistoryLabels = [];
 
 let serverTimeOffset = 0;
 
@@ -26,8 +28,8 @@ let lastOfflineCheckAt = null;
 let offlineSince       = null; // Mencatat kapan sensor mulai offline
 
 const CHART_HISTORY_PATH = 'sensor_data/chart_history';
-const CHART_MAX_POINTS = 8; 
-const CHART_INTERVAL_MS = 15 * 60 * 1000; // 15 Minutes
+const CHART_MAX_POINTS = 30; // Tampilkan 30 menit terakhir
+const CHART_INTERVAL_MS = 1 * 60 * 1000; // 1 Menit
 
 // Format timestamp ke Tanggal Jam:Menit (WIB)
 function formatTimestamp(ts) {
@@ -63,6 +65,8 @@ function initRealtimeChart(isAdmin) {
 
     // Generate placeholder labels with actual HH:MM times
     const placeholderLabels = generateTimeSlotLabels();
+    chartHistoryLabels = [...placeholderLabels];
+    chartHistoryData = new Array(CHART_MAX_POINTS).fill(null);
 
     const ctx = canvasEl.getContext('2d');
     waterChart = new Chart(ctx, {
@@ -107,20 +111,38 @@ function initRealtimeChart(isAdmin) {
     });
 }
 
+function updateChartVisuals() {
+    if (!waterChart) return;
+
+    let displayData = [...chartHistoryData];
+    let displayLabels = [...chartHistoryLabels];
+
+    if (currentWaterLevel !== null && currentWaterLevel !== undefined && displayData.length > 0) {
+        const lastIdx = displayData.length - 1;
+        displayData[lastIdx] = Math.round(currentWaterLevel);
+        
+        const now = new Date();
+        const timeShort = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        displayLabels[lastIdx] = timeShort;
+    }
+
+    waterChart.data.labels = displayLabels;
+    waterChart.data.datasets[0].data = displayData;
+    waterChart.update('none');
+}
+
 /**
  * Generate time slot labels based on current time
- * Shows last CHART_MAX_POINTS slots in 15-min intervals
- * e.g. at 11:00 → ['09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00']
+ * Shows last CHART_MAX_POINTS slots in 1-min intervals
+ * e.g. at 11:05 → ['10:36', '10:37', ..., '11:05']
  */
 function generateTimeSlotLabels() {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    // Round down to nearest 15-minute slot
-    const currentSlot = Math.floor(currentMinutes / 15) * 15;
     
     const labels = [];
     for (let i = CHART_MAX_POINTS - 1; i >= 0; i--) {
-        const slotMinutes = currentSlot - (i * 15);
+        const slotMinutes = currentMinutes - i;
         // Handle midnight wrap-around
         const adjustedMinutes = ((slotMinutes % 1440) + 1440) % 1440;
         const h = String(Math.floor(adjustedMinutes / 60)).padStart(2, '0');
@@ -306,11 +328,9 @@ function startChartHistoryListener() {
                 labels.unshift('--:--');
             }
 
-            if (waterChart) {
-                waterChart.data.labels = labels;
-                waterChart.data.datasets[0].data = entries;
-                waterChart.update('none');
-            }
+            chartHistoryData = entries;
+            chartHistoryLabels = labels;
+            updateChartVisuals();
         });
 }
 
@@ -357,7 +377,7 @@ function maybeSaveChartPoint(value) {
         snapshot.forEach(child => {
             const lastTimestamp = parseInt(child.key);
             if (!isNaN(lastTimestamp) && (now - lastTimestamp) < CHART_INTERVAL_MS) {
-                shouldSave = false; // Belum 15 menit, jangan simpan
+                shouldSave = false; // Belum 1 menit, jangan simpan
             }
         });
 
@@ -547,15 +567,7 @@ function updateUI(waterLevel) {
     if (adminSensorTime) adminSensorTime.textContent = timeString;
 
     // Update titik terakhir pada grafik secara real-time mengikuti nilai sensor terbaru
-    if (waterChart && waterChart.data.datasets[0].data.length > 0) {
-        const lastIdx = waterChart.data.datasets[0].data.length - 1;
-        waterChart.data.datasets[0].data[lastIdx] = Math.round(waterLevel);
-        
-        const timeShort = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
-        waterChart.data.labels[lastIdx] = timeShort;
-        
-        waterChart.update('none');
-    }
+    updateChartVisuals();
 }
 
 // ─────────────────────────────────────────────
@@ -718,9 +730,9 @@ async function pollSensorStatus() {
         const serverTime = Date.now() + serverTimeOffset;
         const diff = serverTime - ts;
 
-        // Toleransi toleran 20 detik (mengakomodasi interval heartbeat 3 detik + jeda transmisi WiFi)
+        // Toleransi toleran 60 detik (mengakomodasi interval heartbeat 3 detik + jeda transmisi WiFi)
         // Menjamin tidak akan ada false offline (notif kedap-kedip) karena gangguan jaringan kecil.
-        const isOffline = (diff > 20 * 1000);
+        const isOffline = (diff > 60 * 1000);
 
         setOfflineState(isOffline, null, isOffline ? ts : null);
 
@@ -1153,9 +1165,9 @@ function startDataListener() {
         const serverTime = Date.now() + serverTimeOffset;
         const diff = serverTime - ts;
 
-        // Jika data di DB sudah lebih dari 20 detik yang lalu, 
-        // berarti saat ini sensor sudah offline (menggunakan server time synced dengan toleransi 20 detik)
-        if (diff > 20 * 1000) {
+        // Jika data di DB sudah lebih dari 60 detik yang lalu, 
+        // berarti saat ini sensor sudah offline (menggunakan server time synced dengan toleransi 60 detik)
+        if (diff > 60 * 1000) {
             setOfflineState(true, null, ts);
         } else {
             if (isSensorOffline) setOfflineState(false);
