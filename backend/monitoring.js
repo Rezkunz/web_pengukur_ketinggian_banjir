@@ -545,6 +545,17 @@ function updateUI(waterLevel) {
     const timeString = now.toLocaleTimeString('id-ID') + ' WIB';
     if (lastUpdateEl) lastUpdateEl.textContent = timeString;
     if (adminSensorTime) adminSensorTime.textContent = timeString;
+
+    // Update titik terakhir pada grafik secara real-time mengikuti nilai sensor terbaru
+    if (waterChart && waterChart.data.datasets[0].data.length > 0) {
+        const lastIdx = waterChart.data.datasets[0].data.length - 1;
+        waterChart.data.datasets[0].data[lastIdx] = Math.round(waterLevel);
+        
+        const timeShort = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        waterChart.data.labels[lastIdx] = timeShort;
+        
+        waterChart.update('none');
+    }
 }
 
 // ─────────────────────────────────────────────
