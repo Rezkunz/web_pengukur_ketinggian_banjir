@@ -130,6 +130,7 @@ function saveMember(e) {
 }
 
 function deleteUser(uid) {
+    if (!database) return;
     // Ambil nama user dulu untuk pesan konfirmasi
     database.ref('users/' + uid).once('value').then(snap => {
         const data = snap.val();
@@ -139,14 +140,19 @@ function deleteUser(uid) {
         const desc = document.getElementById('confirm-modal-desc');
         const btn = document.getElementById('btn-confirm-delete-action');
 
-        desc.innerHTML = `Apakah Anda yakin ingin menghapus <strong>${nama}</strong> dari anggota?`;
-        
-        // Simpan UID ke data-attribute tombol untuk dieksekusi nanti
-        btn.onclick = () => {
-            executeDelete(uid);
-        };
+        if (desc && btn && modal) {
+            desc.innerHTML = `Apakah Anda yakin ingin menghapus <strong>${nama}</strong> dari anggota?`;
+            
+            // Simpan UID ke data-attribute tombol untuk dieksekusi nanti
+            btn.onclick = () => {
+                executeDelete(uid);
+            };
 
-        modal.classList.add('show');
+            modal.classList.add('show');
+        }
+    }).catch(err => {
+        console.error("Gagal mengambil data pengguna sebelum dihapus:", err);
+        showCustomModal('ERROR', 'Gagal', 'Tidak dapat memproses penghapusan: ' + err.message);
     });
 }
 

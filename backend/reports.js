@@ -27,6 +27,15 @@ function submitLapor(e) {
     e.preventDefault();
     if(!auth.currentUser) return;
     
+    const form = e.target;
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const originalBtnText = btnSubmit ? btnSubmit.textContent : '';
+    
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Mengirim...';
+    }
+    
     const nama = document.getElementById('lapor-nama').value;
     const lokasi = document.getElementById('lapor-lokasi').value;
     const tingkat = document.getElementById('lapor-tingkat').value;
@@ -38,15 +47,36 @@ function submitLapor(e) {
             lokasi: lokasi,
             tingkat: tingkat,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).catch(err => console.error(err));
+        })
+        .then(() => {
+            showSuccessModal('Success', 'Laporan berhasil dikirim, terima kasih!');
+            form.reset();
+        })
+        .catch(err => {
+            console.error("Gagal mengirim laporan:", err);
+            showCustomModal('SIAGA2', 'Gagal Mengirim', 'Laporan Anda gagal disimpan: ' + err.message);
+        })
+        .finally(() => {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = originalBtnText;
+            }
+        });
     }
-    showSuccessModal('Success', 'Laporan berhasil dikirim, terima kasih!');
-    e.target.reset();
 }
 
 function submitSaran(e) {
     e.preventDefault();
     if(!auth.currentUser) return;
+    
+    const form = e.target;
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const originalBtnText = btnSubmit ? btnSubmit.textContent : '';
+    
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Mengirim...';
+    }
     
     const email = document.getElementById('saran-email').value;
     const pesan = document.getElementById('saran-pesan').value;
@@ -57,11 +87,22 @@ function submitSaran(e) {
             email: email,
             pesan: pesan,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).catch(err => console.error(err));
+        })
+        .then(() => {
+            showSuccessModal('Success', 'Saran dan masukan Anda berhasil dikirim!');
+            form.reset();
+        })
+        .catch(err => {
+            console.error("Gagal mengirim saran:", err);
+            showCustomModal('SIAGA2', 'Gagal Mengirim', 'Saran Anda gagal disimpan: ' + err.message);
+        })
+        .finally(() => {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = originalBtnText;
+            }
+        });
     }
-    
-    showSuccessModal('Success', 'Saran dan masukan Anda berhasil dikirim!');
-    e.target.reset();
 }
 
 // Helper to escape HTML and prevent XSS

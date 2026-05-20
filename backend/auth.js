@@ -153,6 +153,8 @@ function handleRegister(e) {
             database.ref('users/' + cred.user.uid).set({
                 nama: name,
                 email: em
+            }).catch(err => {
+                console.error("Gagal menyimpan data pengguna ke database:", err);
             });
         }
     }).catch(err => {

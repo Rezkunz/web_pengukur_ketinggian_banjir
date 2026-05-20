@@ -45,7 +45,7 @@
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
 
-        ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
+        ".write": "auth != null && (auth.token.admin === true || (auth.uid === $uid && (!newData.hasChild('role') || (data.hasChild('role') && newData.child('role').val() === data.child('role').val()) || (!data.hasChild('role') && newData.child('role').val() === 'user'))))",
 
         "role": {
           ".write": "auth != null && auth.token.admin === true"
