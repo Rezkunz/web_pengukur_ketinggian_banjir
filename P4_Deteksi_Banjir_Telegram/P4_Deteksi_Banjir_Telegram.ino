@@ -25,6 +25,7 @@ FirebaseConfig config_fb;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 const int trigPin = 14; // Pin D5 pada NodeMCU
 const int echoPin = 12; // Pin D6 pada NodeMCU
+const int buzzerPin = 13; // Pin D7 pada NodeMCU
 
 #define SOUND_VELOCITY 0.034
 long duration;
@@ -37,6 +38,11 @@ String status;
 // Variabel Ambang Ketinggian Air OTA (Default Pengmas, akan di-overwrite oleh OTA)
 int LEVEL_SIAGA1 = 200; 
 int LEVEL_SIAGA2 = 300; 
+int buzzerMode = 1;      // Default: 1 (Otomatis)
+
+// Variabel Non-blocking beeping buzzer
+unsigned long lastBuzzerToggle = 0;
+bool buzzerState = false; 
 
 void baca_level(int median_d);
 
@@ -47,7 +53,7 @@ unsigned long lastHeartbeatUpdate = 0;
 const unsigned long heartbeatInterval = 3000;  // Kirim detak jantung setiap 3 detik jika air tenang
 unsigned long lastFirebaseTxTime = 0;          // Catat waktu kirim WiFi terakhir untuk cooldown tegangan
 unsigned long lastOtaCheck = 0;
-const unsigned long otaInterval = 15000;       // Cek OTA setiap 15 detik (mengambil konfigurasi terbaru)
+const unsigned long otaInterval = 2000;       // Cek OTA setiap 2 detik (sangat responsif & real-time)
 
 // Buffer untuk Moving Median
 int samples[3] = {0, 0, 0};
@@ -65,6 +71,8 @@ void setup() {
   Serial.begin(115200); 
   pinMode(trigPin, OUTPUT); 
   pinMode(echoPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, LOW);
 
   lcd.init();
   lcd.backlight();
@@ -115,6 +123,9 @@ void setup() {
     }
     if (json.get(data, "/siaga2") && data.success && data.type == "int") {
       LEVEL_SIAGA2 = data.intValue;
+    }
+    if (json.get(data, "/buzzer_mode") && data.success && data.type == "int") {
+      buzzerMode = data.intValue;
     }
   }
   
@@ -208,6 +219,10 @@ void loop() {
         int new_s2 = data.intValue;
         if (new_s2 != LEVEL_SIAGA2) { LEVEL_SIAGA2 = new_s2; updated = true; }
       }
+      if (json.get(data, "/buzzer_mode") && data.success && data.type == "int") {
+        int new_buzzerMode = data.intValue;
+        if (new_buzzerMode != buzzerMode) { buzzerMode = new_buzzerMode; updated = true; }
+      }
     }
 
     if (updated) {
@@ -220,6 +235,42 @@ void loop() {
       if(b > c) { int t=b; b=c; c=t; }
       if(a > b) { int t=a; a=b; b=t; }
       baca_level(b);
+    }
+  }
+
+  // 5. Logika Buzzer Non-blocking
+  if (buzzerMode == 0) {
+    // Mode 0: Senyap / Mute
+    digitalWrite(buzzerPin, LOW);
+    buzzerState = false;
+  } 
+  else if (buzzerMode == 2) {
+    // Mode 2: Tes Bunyi (Aktif Terus)
+    digitalWrite(buzzerPin, HIGH);
+    buzzerState = true;
+  } 
+  else {
+    // Mode 1: Otomatis (Mengikuti Ketinggian Air)
+    if (status == "Siaga 2") {
+      // Siaga 2 (Bahaya) -> Beep cepat: 150ms ON, 150ms OFF
+      if (millis() - lastBuzzerToggle >= 150) {
+        lastBuzzerToggle = millis();
+        buzzerState = !buzzerState;
+        digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+      }
+    } 
+    else if (status == "Siaga 1") {
+      // Siaga 1 (Waspada) -> Beep lambat: 600ms ON, 600ms OFF
+      if (millis() - lastBuzzerToggle >= 600) {
+        lastBuzzerToggle = millis();
+        buzzerState = !buzzerState;
+        digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+      }
+    } 
+    else {
+      // Aman -> Mati
+      digitalWrite(buzzerPin, LOW);
+      buzzerState = false;
     }
   }
 }

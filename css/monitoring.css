@@ -1349,3 +1349,45 @@ body.dark-mode .temp-max { color: #e2e8f0 !important; }
         max-height: 200px !important;
     }
 }
+
+/* =====================================================
+   BUZZER BADGE STATUS STYLING
+   ===================================================== */
+.buzzer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 20px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.buzzer-badge.status-mute {
+    background: rgba(148, 163, 184, 0.15);
+    color: #64748b;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.buzzer-badge.status-otomatis {
+    background: rgba(59, 130, 246, 0.15);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.buzzer-badge.status-test {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    animation: alertPulse 1.5s infinite alternate;
+}
+
+@keyframes alertPulse {
+    from { transform: scale(1); box-shadow: 0 2px 5px rgba(239,68,68,0.1); }
+    to { transform: scale(1.03); box-shadow: 0 4px 10px rgba(239,68,68,0.3); }
+}

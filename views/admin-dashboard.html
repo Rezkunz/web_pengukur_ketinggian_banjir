@@ -140,7 +140,7 @@
 <section class="chart-section glass-panel">
     <div class="history-header">
         <div class="history-title-wrap">
-            <h3>Pengaturan Kalibrasi</h3>
+            <h3>Pengaturan Kalibrasi Air</h3>
             <p>Ubah pengaturan tinggi tangki dan batas peringatan secara nirkabel tanpa memprogram ulang NodeMCU.</p>
         </div>
     </div>
@@ -158,8 +158,30 @@
             <input type="number" id="ota-siaga2">
         </div>
     </div>
-    <button id="btn-save-ota">Kalibrasi</button>
+    <button id="btn-save-ota">Simpan Kalibrasi</button>
     <p id="ota-status-msg" style="margin-top: 10px; font-size: 0.85rem; display: none;"></p>
+</section>
+
+<!-- Buzzer Control Section -->
+<section class="chart-section glass-panel" style="margin-top: 24px;">
+    <div class="history-header">
+        <div class="history-title-wrap">
+            <h3>Kontrol Alarm Buzzer</h3>
+            <p>Atur mode operasional alarm buzzer secara real-time.</p>
+        </div>
+    </div>
+    <div class="ota-form-grid" style="max-width: 400px;">
+        <div class="input-group">
+            <label for="ota-buzzer-mode">Mode Alarm Buzzer</label>
+            <select id="ota-buzzer-mode" class="ota-select">
+                <option value="0">🔇 Mute / Senyap</option>
+                <option value="1">🔊 Otomatis (Mengikuti Level Air)</option>
+                <option value="2">🚨 Tes Hardware (Bunyi Terus)</option>
+            </select>
+        </div>
+    </div>
+    <button id="btn-save-buzzer">Simpan Mode Buzzer</button>
+    <p id="buzzer-status-msg" style="margin-top: 10px; font-size: 0.85rem; display: none;"></p>
 </section>
 
 <p class="refresh-time" style="text-align:center;">Sistem Aktif &amp; Terlindungi</p>
@@ -190,7 +212,7 @@
 
 .ota-form-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
     margin-top: 15px;
 }
@@ -204,7 +226,8 @@
     font-weight: bold;
     margin-bottom: 5px;
 }
-.ota-form-grid input {
+.ota-form-grid input,
+.ota-form-grid select.ota-select {
     width: 100%;
     padding: 10px 12px;
     border-radius: 8px;
@@ -216,12 +239,14 @@
     font-size: 0.9rem;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
+    height: 42px; /* Set height to align input and select */
 }
-.ota-form-grid input:focus {
+.ota-form-grid input:focus,
+.ota-form-grid select.ota-select:focus {
     border-color: var(--brand-primary, #3b82f6);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
-#btn-save-ota {
+#btn-save-ota, #btn-save-buzzer {
     margin-top: 20px;
     background: var(--brand-primary, #3b82f6);
     color: white;
@@ -232,7 +257,7 @@
     font-weight: bold;
     transition: 0.2s;
 }
-#btn-save-ota:hover {
+#btn-save-ota:hover, #btn-save-buzzer:hover {
     opacity: 0.9;
 }
 
@@ -243,7 +268,7 @@
         grid-template-columns: 1fr;
         gap: 12px;
     }
-    #btn-save-ota {
+    #btn-save-ota, #btn-save-buzzer {
         width: 100%;
     }
 }

@@ -1047,12 +1047,34 @@ function startDataListener() {
             THRESHOLDS.SIAGA1 = conf.siaga1 || 200;
             THRESHOLDS.SIAGA2 = conf.siaga2 || 300;
             
+            // Update buzzer status badge (User View)
+            const buzzerBadge = document.getElementById('buzzer-status-badge');
+            if (buzzerBadge) {
+                const bMode = conf.buzzer_mode !== undefined ? Number(conf.buzzer_mode) : 1; // default otomatis
+                buzzerBadge.className = 'buzzer-badge'; // reset
+                if (bMode === 0) {
+                    buzzerBadge.classList.add('status-mute');
+                    buzzerBadge.textContent = '🔇 Buzzer: Senyap';
+                } else if (bMode === 2) {
+                    buzzerBadge.classList.add('status-test');
+                    buzzerBadge.textContent = '🚨 Buzzer: Tes Hardware';
+                } else {
+                    buzzerBadge.classList.add('status-otomatis');
+                    buzzerBadge.textContent = '🔊 Buzzer: Otomatis';
+                }
+            }
+            
             // Isi form OTA admin jika ada dan sedang tidak diketik
             const inH = document.getElementById('ota-max-height');
             if (inH && document.activeElement !== inH) {
                 inH.value = conf.max_height;
                 document.getElementById('ota-siaga1').value = conf.siaga1;
                 document.getElementById('ota-siaga2').value = conf.siaga2;
+                
+                const inBuzzer = document.getElementById('ota-buzzer-mode');
+                if (inBuzzer) {
+                    inBuzzer.value = conf.buzzer_mode !== undefined ? conf.buzzer_mode : 1;
+                }
             }
 
             // Langsung perbarui UI untuk merespon perubahan batas
@@ -1082,7 +1104,7 @@ function startDataListener() {
         }
     });
 
-    // Handle Simpan OTA
+    // Handle Simpan OTA (Kalibrasi Air)
     document.addEventListener('click', (e) => {
         if (e.target.id === 'btn-save-ota') {
             const maxH = parseInt(document.getElementById('ota-max-height').value);
@@ -1090,27 +1112,55 @@ function startDataListener() {
             const s2 = parseInt(document.getElementById('ota-siaga2').value);
             const msg = document.getElementById('ota-status-msg');
             
-            if (!maxH || !s1 || !s2) {
-                msg.textContent = 'Harap isi semua kolom dengan angka!';
+            if (isNaN(maxH) || isNaN(s1) || isNaN(s2)) {
+                msg.textContent = 'Harap isi semua kolom kalibrasi dengan benar!';
                 msg.style.color = 'red';
                 msg.style.display = 'block';
                 return;
             }
             
-            msg.textContent = 'Mengirim perintah kalibrasi OTA...';
+            msg.textContent = 'Mengirim perintah kalibrasi air...';
             msg.style.color = '#3b82f6';
             msg.style.display = 'block';
             
-            database.ref('sensor_data/config').set({
+            database.ref('sensor_data/config').update({
                 max_height: maxH,
                 siaga1: s1,
                 siaga2: s2
             }).then(() => {
-                msg.textContent = 'Kalibrasi berhasil! NodeMCU & Web sudah beradaptasi.';
+                msg.textContent = 'Kalibrasi air berhasil! NodeMCU & Web sudah beradaptasi.';
                 msg.style.color = 'green';
                 setTimeout(() => msg.style.display = 'none', 5000);
             }).catch(err => {
-                msg.textContent = 'Gagal mengirim OTA: ' + err.message;
+                msg.textContent = 'Gagal menyimpan kalibrasi: ' + err.message;
+                msg.style.color = 'red';
+            });
+        }
+        
+        // Handle Simpan Mode Buzzer
+        if (e.target.id === 'btn-save-buzzer') {
+            const buzzerModeVal = parseInt(document.getElementById('ota-buzzer-mode').value);
+            const msg = document.getElementById('buzzer-status-msg');
+            
+            if (isNaN(buzzerModeVal)) {
+                msg.textContent = 'Harap pilih mode buzzer yang valid!';
+                msg.style.color = 'red';
+                msg.style.display = 'block';
+                return;
+            }
+            
+            msg.textContent = 'Mengirim pengaturan buzzer...';
+            msg.style.color = '#3b82f6';
+            msg.style.display = 'block';
+            
+            database.ref('sensor_data/config').update({
+                buzzer_mode: buzzerModeVal
+            }).then(() => {
+                msg.textContent = 'Mode buzzer berhasil diperbarui secara real-time!';
+                msg.style.color = 'green';
+                setTimeout(() => msg.style.display = 'none', 5000);
+            }).catch(err => {
+                msg.textContent = 'Gagal menyimpan mode buzzer: ' + err.message;
                 msg.style.color = 'red';
             });
         }
