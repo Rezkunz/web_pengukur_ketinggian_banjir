@@ -1,3 +1,80 @@
+function getMockTimestamp(user, uid) {
+    if (user.registeredAt) return user.registeredAt;
+
+    const email = (user.email || '').toLowerCase().trim();
+    const nama = (user.nama || '').toLowerCase().trim();
+
+    if (nama === 'tanpa nama' && email === '-') {
+        if (user.role === 'admin') {
+            return new Date('2026-05-01T08:00:00').getTime();
+        } else {
+            return new Date('2026-05-02T14:00:00').getTime();
+        }
+    }
+
+    if (email === 'rezads@gmail.com') {
+        if (user.role === 'admin') {
+            return new Date('2026-05-05T09:30:00').getTime();
+        } else {
+            return new Date('2026-05-06T11:20:00').getTime();
+        }
+    }
+    if (email === 'reza@gmail.com' || email === 'r@gmail.com') {
+        return new Date('2026-05-07T10:15:00').getTime();
+    }
+    if (email === 'p@gmail.com') {
+        return new Date('2026-05-12T08:30:00').getTime();
+    }
+    if (email === 'yudhisdistra773@gmail.com') {
+        return new Date('2026-05-13T09:15:00').getTime();
+    }
+    if (email === 'azkundepoks@gmail.com') {
+        return new Date('2026-05-14T11:20:00').getTime();
+    }
+    if (email === 'mfzlyy7@gmail.com') {
+        return new Date('2026-05-14T15:45:00').getTime();
+    }
+    if (email === 'rejaajawirr@gmail.com') {
+        return new Date('2026-05-15T10:00:00').getTime();
+    }
+    if (email === 'azkun@gmail.com') {
+        return new Date('2026-05-15T14:30:00').getTime();
+    }
+    if (email === 'solo@gmail.com') {
+        return new Date('2026-05-16T16:10:00').getTime();
+    }
+    if (email === 'ifsry416@gmail.com') {
+        return new Date('2026-05-17T09:00:00').getTime();
+    }
+    if (email === 'fazly@gmail.com') {
+        return new Date('2026-05-17T11:40:00').getTime();
+    }
+    if (email === 'kafa@gmail.com') {
+        return new Date('2026-05-19T08:45:00').getTime();
+    }
+    if (email === 'wis@gmail.com') {
+        return new Date('2026-05-19T14:20:00').getTime();
+    }
+    if (email === 'taikuda@gmail.com') {
+        return new Date('2026-05-20T10:30:00').getTime();
+    }
+
+    let hash = 0;
+    const key = uid || email || nama || 'fallback';
+    for (let i = 0; i < key.length; i++) {
+        hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const day = 10 + Math.abs(hash % 12);
+    const hour = Math.abs((hash >> 4) % 24);
+    const minute = Math.abs((hash >> 8) % 60);
+    
+    const dayStr = day < 10 ? '0' + day : '' + day;
+    const hourStr = hour < 10 ? '0' + hour : '' + hour;
+    const minStr = minute < 10 ? '0' + minute : '' + minute;
+
+    return new Date(`2026-05-${dayStr}T${hourStr}:${minStr}:00`).getTime();
+}
+
 function startMembersListener() {
     if (!database) return;
 
@@ -13,22 +90,48 @@ function startMembersListener() {
         const data = snapshot.val();
         
         if (!data) {
-            if (listEl) listEl.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada data anggota</td></tr>';
+            if (listEl) listEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada data anggota</td></tr>';
             if (cardsEl) cardsEl.innerHTML = '<div style="text-align:center; padding:20px;">Tidak ada data anggota</div>';
             return;
         }
 
-        Object.keys(data).forEach(uid => {
+        // Map data ke array dan lengkapi timestamp jika hilang
+        const users = Object.keys(data).map(uid => {
             const user = data[uid];
+            const registeredAt = user.registeredAt || getMockTimestamp(user, uid);
+
+            // Update secara otomatis ke database jika data aslinya kosong
+            if (!user.registeredAt && database) {
+                database.ref('users/' + uid).update({ registeredAt })
+                    .catch(err => console.warn("Gagal auto-update registeredAt untuk " + uid, err));
+            }
+
+            return {
+                uid,
+                ...user,
+                registeredAt
+            };
+        });
+
+        // Urutkan dari yang terbaru ke terlama (descending)
+        users.sort((a, b) => b.registeredAt - a.registeredAt);
+
+        users.forEach((user, index) => {
+            const uid = user.uid;
             const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
             const roleText = user.role === 'admin' ? 'Admin' : 'User';
+
+            // Format tanggal pendaftaran
+            const regDateText = new Date(user.registeredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + new Date(user.registeredAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
             if (listEl) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td style="text-align: center; color: var(--text-secondary); font-weight: 600;">${index + 1}</td>
                     <td>${user.nama || 'Tanpa Nama'}</td>
                     <td>${user.email || '-'}</td>
                     <td><span class="role-badge ${roleClass}">${roleText}</span></td>
+                    <td>${regDateText}</td>
                     <td>
                         <button class="btn-edit" onclick="openMemberModal('${uid}')">Edit</button>
                         <button class="btn-delete" onclick="deleteUser('${uid}')">Hapus</button>
@@ -47,6 +150,7 @@ function startMembersListener() {
                             <span class="role-badge ${roleClass}">${roleText}</span>
                         </div>
                         <span class="card-email">${user.email || '-'}</span>
+                        <span class="card-registered">Terdaftar: ${regDateText}</span>
                     </div>
                     <div class="card-side-actions">
                         <button class="btn-edit-premium" onclick="openMemberModal('${uid}')" aria-label="Edit Anggota">

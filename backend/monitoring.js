@@ -1129,9 +1129,8 @@ function startDataListener() {
                 siaga1: s1,
                 siaga2: s2
             }).then(() => {
-                msg.textContent = 'Kalibrasi air berhasil! NodeMCU & Web sudah beradaptasi.';
-                msg.style.color = 'green';
-                setTimeout(() => msg.style.display = 'none', 5000);
+                msg.style.display = 'none';
+                showSuccessModal('Berhasil', 'Kalibrasi air berhasil!');
             }).catch(err => {
                 msg.textContent = 'Gagal menyimpan kalibrasi: ' + err.message;
                 msg.style.color = 'red';
@@ -1157,9 +1156,8 @@ function startDataListener() {
             database.ref('sensor_data/config').update({
                 buzzer_mode: buzzerModeVal
             }).then(() => {
-                msg.textContent = 'Mode buzzer berhasil diperbarui secara real-time!';
-                msg.style.color = 'green';
-                setTimeout(() => msg.style.display = 'none', 5000);
+                msg.style.display = 'none';
+                showSuccessModal('Berhasil', 'Mode buzzer berhasil diperbarui!');
             }).catch(err => {
                 msg.textContent = 'Gagal menyimpan mode buzzer: ' + err.message;
                 msg.style.color = 'red';

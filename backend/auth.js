@@ -152,7 +152,8 @@ function handleRegister(e) {
             // Field 'role' di DB hanya untuk tampilan UI dan di-set oleh Admin secara manual.
             database.ref('users/' + cred.user.uid).set({
                 nama: name,
-                email: em
+                email: em,
+                registeredAt: firebase.database.ServerValue.TIMESTAMP
             }).catch(err => {
                 console.error("Gagal menyimpan data pengguna ke database:", err);
             });
