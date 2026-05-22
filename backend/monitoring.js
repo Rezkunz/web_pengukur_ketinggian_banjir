@@ -22,6 +22,7 @@ let serverTimeOffset = 0;
 // Sensor Offline Detection Logic (20s polling)
 const POLL_INTERVAL_MS = 5 * 1000; // Cek setiap 5 detik
 const POLL_GAP_MS      = 2500;     // Jeda 2.5 detik antar sampel (menghindari false offline)
+const OFFLINE_THRESHOLD_MS = 12 * 1000; // Toleransi waktu sebelum dianggap offline (12 detik)
 let offlinePollTimer   = null;
 let isSensorOffline    = false;
 let lastOfflineCheckAt = null;
@@ -730,9 +731,9 @@ async function pollSensorStatus() {
         const serverTime = Date.now() + serverTimeOffset;
         const diff = serverTime - ts;
 
-        // Toleransi toleran 60 detik (mengakomodasi interval heartbeat 3 detik + jeda transmisi WiFi)
+        // Toleransi waktu sebelum dianggap offline (mengakomodasi interval heartbeat 3 detik + jeda transmisi WiFi)
         // Menjamin tidak akan ada false offline (notif kedap-kedip) karena gangguan jaringan kecil.
-        const isOffline = (diff > 60 * 1000);
+        const isOffline = (diff > OFFLINE_THRESHOLD_MS);
 
         setOfflineState(isOffline, null, isOffline ? ts : null);
 
@@ -1215,9 +1216,9 @@ function startDataListener() {
         const serverTime = Date.now() + serverTimeOffset;
         const diff = serverTime - ts;
 
-        // Jika data di DB sudah lebih dari 60 detik yang lalu, 
-        // berarti saat ini sensor sudah offline (menggunakan server time synced dengan toleransi 60 detik)
-        if (diff > 60 * 1000) {
+        // Jika data di DB sudah lebih dari batas toleransi, 
+        // berarti saat ini sensor sudah offline (menggunakan server time synced dengan toleransi)
+        if (diff > OFFLINE_THRESHOLD_MS) {
             setOfflineState(true, null, ts);
         } else {
             if (isSensorOffline) setOfflineState(false);

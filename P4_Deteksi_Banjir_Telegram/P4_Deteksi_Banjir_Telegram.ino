@@ -10,6 +10,7 @@
 char ssid[] = "Ciganitiry"; 
 char pass[] = "Mabelku18";   
 
+
 // Konfigurasi Firebase Anda
 #define FIREBASE_HOST "safe-93f61-default-rtdb.asia-southeast1.firebasedatabase.app"
 #define FIREBASE_API_KEY "AIzaSyChO4h8v33LB_ovIXcBg-yVJrmN40N0WUk"
@@ -43,6 +44,10 @@ int buzzerMode = 1;      // Default: 1 (Otomatis)
 // Variabel Non-blocking beeping buzzer
 unsigned long lastBuzzerToggle = 0;
 bool buzzerState = false; 
+String lastBuzzerStatus = "Aman";
+unsigned long statusChangeTime = 0;
+const unsigned long buzzerTimeout = 120000; // 2 menit timeout untuk auto-silence alarm
+ 
 
 void baca_level(int median_d);
 
@@ -92,6 +97,8 @@ void setup() {
   lcd.clear();
   lcd.print("Koneksi Sukses!");
   delay(1000);
+
+
   
   // Inisialisasi Firebase SECURE (Email/Password)
   lcd.clear();
@@ -251,24 +258,36 @@ void loop() {
   } 
   else {
     // Mode 1: Otomatis (Mengikuti Ketinggian Air)
-    if (status == "Siaga 2") {
-      // Siaga 2 (Bahaya) -> Beep cepat: 150ms ON, 150ms OFF
-      if (millis() - lastBuzzerToggle >= 150) {
-        lastBuzzerToggle = millis();
-        buzzerState = !buzzerState;
-        digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
-      }
-    } 
-    else if (status == "Siaga 1") {
-      // Siaga 1 (Waspada) -> Beep lambat: 600ms ON, 600ms OFF
-      if (millis() - lastBuzzerToggle >= 600) {
-        lastBuzzerToggle = millis();
-        buzzerState = !buzzerState;
-        digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+    
+    // Deteksi jika status alarm berubah (misal Aman -> Siaga 1, atau Siaga 1 -> Siaga 2)
+    if (status != lastBuzzerStatus) {
+      lastBuzzerStatus = status;
+      statusChangeTime = millis(); // Reset waktu awal bunyi
+    }
+
+    // Cek apakah bunyi alarm sudah melebihi batas waktu (timeout)
+    bool isExpired = (millis() - statusChangeTime >= buzzerTimeout);
+
+    if ((status == "Siaga 2" || status == "Siaga 1") && !isExpired) {
+      if (status == "Siaga 2") {
+        // Siaga 2 (Bahaya) -> Beep cepat: 150ms ON, 150ms OFF
+        if (millis() - lastBuzzerToggle >= 150) {
+          lastBuzzerToggle = millis();
+          buzzerState = !buzzerState;
+          digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+        }
+      } 
+      else if (status == "Siaga 1") {
+        // Siaga 1 (Waspada) -> Beep lambat: 600ms ON, 600ms OFF
+        if (millis() - lastBuzzerToggle >= 600) {
+          lastBuzzerToggle = millis();
+          buzzerState = !buzzerState;
+          digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+        }
       }
     } 
     else {
-      // Aman -> Mati
+      // Aman ATAU waktu berbunyi sudah habis -> matikan buzzer
       digitalWrite(buzzerPin, LOW);
       buzzerState = false;
     }
