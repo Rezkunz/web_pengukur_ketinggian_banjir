@@ -195,3 +195,24 @@ document.addEventListener('click', (e) => {
         if (dd) dd.style.display = 'none';
     }
 });
+
+// Helper to escape HTML and prevent XSS
+function escapeHTML(str) {
+    if (!str) return "";
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Sync bottom navigation bar item active state with active view section
+function syncNavigationActiveState(targetViewId) {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        if (item.getAttribute('data-target') === targetViewId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+

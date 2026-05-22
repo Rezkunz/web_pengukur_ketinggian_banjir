@@ -1120,6 +1120,27 @@ function startDataListener() {
                 return;
             }
             
+            if (maxH <= 0 || s1 <= 0 || s2 <= 0) {
+                msg.textContent = 'Semua nilai kalibrasi harus lebih besar dari 0!';
+                msg.style.color = 'red';
+                msg.style.display = 'block';
+                return;
+            }
+            
+            if (s1 >= s2) {
+                msg.textContent = 'Batas Siaga 1 harus lebih kecil dari Batas Siaga 2!';
+                msg.style.color = 'red';
+                msg.style.display = 'block';
+                return;
+            }
+            
+            if (s2 >= maxH) {
+                msg.textContent = 'Batas Siaga 2 harus lebih kecil dari Tinggi Tangki Maksimal!';
+                msg.style.color = 'red';
+                msg.style.display = 'block';
+                return;
+            }
+            
             msg.textContent = 'Mengirim perintah kalibrasi air...';
             msg.style.color = '#3b82f6';
             msg.style.display = 'block';

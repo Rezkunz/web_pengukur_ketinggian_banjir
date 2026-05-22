@@ -105,13 +105,6 @@ function submitSaran(e) {
     }
 }
 
-// Helper to escape HTML and prevent XSS
-function escapeHTML(str) {
-    if (!str) return "";
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
 
 // ADMIN DASHBOARD LOGICS
 function listenAdminData() {
@@ -140,8 +133,8 @@ function listenAdminData() {
             // Determine badge color based on tingkat
             let badgeColor = '#3498db'; // default biru
             let tk = data.tingkat ? data.tingkat.toLowerCase() : '';
-            if(tk.includes('siaga 2') || tk.includes('bahaya') || tk.includes('parah')) badgeColor = '#ef4444'; // merah
-            else if(tk.includes('siaga 1') || tk.includes('waspada')) badgeColor = '#f59e0b'; // kuning/orange
+            if(tk.includes('siaga 2') || tk.includes('bahaya') || tk.includes('parah') || tk.includes('pinggang') || tk.includes('dada')) badgeColor = '#ef4444'; // merah
+            else if(tk.includes('siaga 1') || tk.includes('waspada') || tk.includes('lutut')) badgeColor = '#f59e0b'; // kuning/orange
             
             if(adminLapor) {
                 const safeNama = escapeHTML(data.nama || 'Anonim');
@@ -158,9 +151,9 @@ function listenAdminData() {
                         <span class="admin-report-time">🕒 ${safeTime}</span>
                     </div>
                     <div class="admin-report-body">
-                        <p class="admin-report-detail"><strong>📍 Lokasi:</strong> <span>${safeLokasi}</span></p>
+                        <p class="admin-report-detail"><strong>Lokasi:</strong> <span>${safeLokasi}</span></p>
                         <p class="admin-report-detail" style="display: flex; align-items: center; gap: 5px;">
-                            <strong>🌊 Tingkat:</strong> 
+                            <strong>Tingkat:</strong> 
                             <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${safeTingkat}</span>
                         </p>
                     </div>

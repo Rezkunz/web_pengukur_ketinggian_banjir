@@ -128,8 +128,8 @@ function startMembersListener() {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="text-align: center; color: var(--text-secondary); font-weight: 600;">${index + 1}</td>
-                    <td>${user.nama || 'Tanpa Nama'}</td>
-                    <td>${user.email || '-'}</td>
+                    <td>${escapeHTML(user.nama || 'Tanpa Nama')}</td>
+                    <td>${escapeHTML(user.email || '-')}</td>
                     <td><span class="role-badge ${roleClass}">${roleText}</span></td>
                     <td>${regDateText}</td>
                     <td>
@@ -146,10 +146,10 @@ function startMembersListener() {
                 card.innerHTML = `
                     <div class="card-info">
                         <div class="card-name-row">
-                            <span class="card-name">${user.nama || 'Tanpa Nama'}</span>
+                            <span class="card-name">${escapeHTML(user.nama || 'Tanpa Nama')}</span>
                             <span class="role-badge ${roleClass}">${roleText}</span>
                         </div>
-                        <span class="card-email">${user.email || '-'}</span>
+                        <span class="card-email">${escapeHTML(user.email || '-')}</span>
                         <span class="card-registered">Terdaftar: ${regDateText}</span>
                     </div>
                     <div class="card-side-actions">
@@ -245,7 +245,7 @@ function deleteUser(uid) {
         const btn = document.getElementById('btn-confirm-delete-action');
 
         if (desc && btn && modal) {
-            desc.innerHTML = `Apakah Anda yakin ingin menghapus <strong>${nama}</strong> dari anggota?`;
+            desc.innerHTML = `Apakah Anda yakin ingin menghapus <strong>${escapeHTML(nama)}</strong> dari anggota?`;
             
             // Simpan UID ke data-attribute tombol untuk dieksekusi nanti
             btn.onclick = () => {

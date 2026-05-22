@@ -57,8 +57,10 @@ async function closeEditProfile() {
     const isAdmin = await checkUserRole(auth.currentUser);
     if(isAdmin) {
         document.getElementById('view-admin-dashboard').classList.add('active');
+        syncNavigationActiveState('view-admin-dashboard');
     } else {
         document.getElementById('view-monitoring').classList.add('active');
+        syncNavigationActiveState('view-monitoring');
     }
 }
 
