@@ -883,6 +883,43 @@ function getWmoIconImg(code) {
     return `<img src="https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/${icon}.svg" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
 }
 
+function isBmkgWeatherData(data) {
+    return data && data.lokasi && Array.isArray(data.data) && Array.isArray(data.data[0]?.cuaca);
+}
+
+function getBmkgSlots(data) {
+    if (!isBmkgWeatherData(data)) return [];
+    return data.data[0].cuaca.flat().filter(Boolean);
+}
+
+function getBmkgDate(slot) {
+    const raw = slot.local_datetime || slot.datetime || slot.utc_datetime;
+    if (!raw) return new Date();
+    if (slot.local_datetime) return new Date(raw.replace(' ', 'T') + '+07:00');
+    return new Date(raw);
+}
+
+function getBmkgCurrentSlot(data) {
+    const slots = getBmkgSlots(data);
+    const now = Date.now();
+    return slots.find(slot => getBmkgDate(slot).getTime() >= now) || slots[0];
+}
+
+function getBmkgIconImg(slot) {
+    if (slot?.image) {
+        return `<img src="${encodeURI(slot.image)}" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
+    }
+    return getWmoIconImg(2);
+}
+
+async function fetchBmkgWeatherData() {
+    const response = await fetchWithTimeout('https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=32.04.08.2005', {}, 8000);
+    if (!response.ok) throw new Error('BMKG fetch failed');
+    const data = await response.json();
+    data.source = 'bmkg';
+    return data;
+}
+
 async function fetchWeatherNews() {
     const container = document.getElementById('weather-news-container');
     const badge = document.getElementById('news-refresh-badge');
@@ -1029,7 +1066,17 @@ async function fetchWeatherData(lat, lon) {
             }
         }
 
-        // 3. Try Open-Meteo via Codetabs Proxy
+        // 3. Official BMKG fallback for Bojongsoang area
+        if (!data) {
+            try {
+                console.log('Open-Meteo failed, falling back to BMKG Bojongsoang...');
+                data = await fetchBmkgWeatherData();
+            } catch (e) {
+                console.log('BMKG fetch failed:', e);
+            }
+        }
+
+        // 4. Try Open-Meteo via Codetabs Proxy
         if (!data) {
             try {
                 console.log('Fetching Open-Meteo via Proxy...');
@@ -1044,7 +1091,7 @@ async function fetchWeatherData(lat, lon) {
             }
         }
 
-        // 4. Fallback to wttr.in if Open-Meteo completely failed
+        // 5. Fallback to wttr.in if Open-Meteo completely failed
         if (!data) {
             try {
                 console.log('Open-Meteo failed, falling back to local wttr.in bypass...');
@@ -1074,6 +1121,10 @@ async function fetchWeatherData(lat, lon) {
             updateWeatherUIFromMeteo(data);
             if (data.hourly) renderHourlyForecast(data.hourly);
             if (data.daily) renderDailyForecast(data.daily);
+        } else if (isBmkgWeatherData(data)) {
+            updateWeatherUIFromBmkg(data);
+            renderHourlyForecastFromBmkg(data);
+            renderDailyForecastFromBmkg(data);
         }
     } catch (err) {
         console.warn('Gagal memuat cuaca:', err);
@@ -1141,6 +1192,25 @@ function updateWeatherUIFromMeteo(data) {
     if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
 }
 
+function updateWeatherUIFromBmkg(data) {
+    const tempEl = document.getElementById('weather-temp');
+    const descEl = document.getElementById('weather-desc');
+    const locEl = document.getElementById('weather-location');
+    const subEl = document.getElementById('weather-subtext');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+    const current = getBmkgCurrentSlot(data);
+    const lokasi = data.lokasi || data.data?.[0]?.lokasi || {};
+
+    if (!current) return;
+    if (tempEl) tempEl.textContent = `${Math.round(current.t)}\u00B0C`;
+    if (descEl) descEl.textContent = current.weather_desc || 'Data BMKG';
+    if (locEl) locEl.textContent = lokasi.kecamatan || weatherLocationName || 'Bojongsoang';
+    if (subEl) subEl.textContent = [lokasi.desa, lokasi.kotkab].filter(Boolean).join(', ') || 'Data BMKG';
+    if (humEl) humEl.textContent = `${current.hu}%`;
+    if (windEl) windEl.textContent = `${current.ws} m/s`;
+}
+
 let _deviceWeatherRetryCount = 0;
 const _DEVICE_WEATHER_MAX_RETRIES = 3;
 
@@ -1174,7 +1244,17 @@ async function fetchDeviceWeatherData() {
             }
         }
 
-        // 3. Try Open-Meteo via Codetabs Proxy
+        // 3. Official BMKG fallback for the device area
+        if (!data) {
+            try {
+                console.log('Open-Meteo device fetch failed, falling back to BMKG Bojongsoang...');
+                data = await fetchBmkgWeatherData();
+            } catch (e) {
+                console.log('BMKG device fetch failed:', e);
+            }
+        }
+
+        // 4. Try Open-Meteo via Codetabs Proxy
         if (!data) {
             try {
                 console.log('Fetching Open-Meteo via Proxy for device...');
@@ -1189,7 +1269,7 @@ async function fetchDeviceWeatherData() {
             }
         }
 
-        // 4. Fallback to wttr.in if Open-Meteo completely failed
+        // 5. Fallback to wttr.in if Open-Meteo completely failed
         if (!data) {
             try {
                 console.log('Open-Meteo device fetch failed, falling back to wttr.in...');
@@ -1214,6 +1294,8 @@ async function fetchDeviceWeatherData() {
             updateDeviceWeatherUIFromWttr(data);
         } else if (data.current) {
             updateDeviceWeatherUIFromMeteo(data);
+        } else if (isBmkgWeatherData(data)) {
+            updateDeviceWeatherUIFromBmkg(data);
         }
     } catch (err) {
         console.warn('Gagal memuat cuaca alat:', err);
@@ -1272,6 +1354,25 @@ function updateDeviceWeatherUIFromMeteo(data) {
     if (subEl) subEl.textContent = 'Bojongsoang, Bandung';
     if (humEl) humEl.textContent = `${current.relative_humidity_2m}%`;
     if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
+}
+
+function updateDeviceWeatherUIFromBmkg(data) {
+    const tempEl = document.getElementById('device-weather-temp');
+    const descEl = document.getElementById('device-weather-desc');
+    const locEl = document.getElementById('device-weather-location');
+    const subEl = document.getElementById('device-weather-subtext');
+    const humEl = document.getElementById('device-weather-humidity');
+    const windEl = document.getElementById('device-weather-wind');
+    const current = getBmkgCurrentSlot(data);
+    const lokasi = data.lokasi || data.data?.[0]?.lokasi || {};
+
+    if (!current) return;
+    if (tempEl) tempEl.textContent = `${Math.round(current.t)}\u00B0C`;
+    if (descEl) descEl.textContent = current.weather_desc || 'Data BMKG';
+    if (locEl) locEl.textContent = 'Desa Lamajang';
+    if (subEl) subEl.textContent = [lokasi.kecamatan, lokasi.kotkab].filter(Boolean).join(', ') || 'Bojongsoang, Bandung';
+    if (humEl) humEl.textContent = `${current.hu}%`;
+    if (windEl) windEl.textContent = `${current.ws} m/s`;
 }
 
 function renderHourlyForecast(hourlyOrDays) {
@@ -1368,6 +1469,34 @@ function renderHourlyForecastFromMeteo(hourly) {
     }
 }
 
+function renderHourlyForecastFromBmkg(data) {
+    const container = document.getElementById('hourly-forecast-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const now = Date.now();
+    const slots = getBmkgSlots(data)
+        .filter(slot => getBmkgDate(slot).getTime() >= now)
+        .slice(0, 8);
+
+    let delay = 0;
+    slots.forEach(slot => {
+        const timeStr = getBmkgDate(slot).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        const temp = Math.round(slot.t);
+
+        const div = document.createElement('div');
+        div.className = 'hourly-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="hourly-time">${timeStr}</div>
+            <div class="hourly-icon" style="width: 48px; height: 48px; margin-bottom: 8px;">${getBmkgIconImg(slot)}</div>
+            <div class="hourly-temp">${temp}\u00B0</div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    });
+}
+
 function renderDailyForecastFromWttr(weatherDays) {
     const container = document.getElementById('daily-forecast-container');
     if (!container) return;
@@ -1393,6 +1522,47 @@ function renderDailyForecastFromWttr(weatherDays) {
             <div class="daily-temps" style="flex: 1; text-align: right; justify-content: flex-end;">
                 <span class="temp-min">${min}°</span>
                 <span class="temp-max">${max}°</span>
+            </div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    });
+}
+
+function renderDailyForecastFromBmkg(data) {
+    const container = document.getElementById('daily-forecast-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const grouped = new Map();
+    getBmkgSlots(data).forEach(slot => {
+        const date = getBmkgDate(slot);
+        const key = date.toISOString().slice(0, 10);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(slot);
+    });
+
+    let delay = 0;
+    Array.from(grouped.entries()).slice(0, 7).forEach(([dateKey, slots], i) => {
+        const date = new Date(`${dateKey}T00:00:00+07:00`);
+        const temps = slots.map(slot => Number(slot.t)).filter(Number.isFinite);
+        const min = Math.round(Math.min(...temps));
+        const max = Math.round(Math.max(...temps));
+        const representative = slots[Math.min(3, slots.length - 1)] || slots[0];
+        const isToday = i === 0;
+        const dayName = isToday ? 'Hari Ini' : days[date.getDay()];
+
+        const div = document.createElement('div');
+        div.className = 'daily-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="daily-day" style="flex: 1;">${dayName}</div>
+            <div class="daily-icon" style="width: 32px; height: 32px;">${getBmkgIconImg(representative)}</div>
+            <div class="daily-desc" style="flex: 1.5; padding-left: 10px; font-size: 0.85rem; color: #1e293b; font-weight: 600;">${representative.weather_desc || 'Data BMKG'}</div>
+            <div class="daily-temps" style="flex: 1; text-align: right; justify-content: flex-end;">
+                <span class="temp-min">${min}\u00B0</span>
+                <span class="temp-max">${max}\u00B0</span>
             </div>
         `;
         container.appendChild(div);
