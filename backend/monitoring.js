@@ -1019,7 +1019,7 @@ async function fetchWeatherData(lat, lon) {
         if (!data) {
             try {
                 console.log('Fetching directly from Open-Meteo...');
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
                 response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
@@ -1033,7 +1033,7 @@ async function fetchWeatherData(lat, lon) {
         if (!data) {
             try {
                 console.log('Fetching Open-Meteo via Proxy...');
-                const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
                 const url = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
                 response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
@@ -1141,6 +1141,9 @@ function updateWeatherUIFromMeteo(data) {
     if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
 }
 
+let _deviceWeatherRetryCount = 0;
+const _DEVICE_WEATHER_MAX_RETRIES = 3;
+
 async function fetchDeviceWeatherData() {
     try {
         let response;
@@ -1161,7 +1164,7 @@ async function fetchDeviceWeatherData() {
         if (!data) {
             try {
                 console.log('Fetching directly from Open-Meteo for device...');
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
                 response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
@@ -1175,7 +1178,7 @@ async function fetchDeviceWeatherData() {
         if (!data) {
             try {
                 console.log('Fetching Open-Meteo via Proxy for device...');
-                const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
                 const url = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
                 response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
@@ -1204,6 +1207,9 @@ async function fetchDeviceWeatherData() {
             throw new Error('All weather data sources failed');
         }
         
+        // Berhasil — reset retry counter
+        _deviceWeatherRetryCount = 0;
+
         if (data.current_condition) {
             updateDeviceWeatherUIFromWttr(data);
         } else if (data.current) {
@@ -1211,10 +1217,23 @@ async function fetchDeviceWeatherData() {
         }
     } catch (err) {
         console.warn('Gagal memuat cuaca alat:', err);
-        const tempEl = document.getElementById('device-weather-temp');
-        const descEl = document.getElementById('device-weather-desc');
-        if (tempEl) tempEl.textContent = '--°C';
-        if (descEl) descEl.textContent = 'Gagal memuat cuaca';
+        
+        // Auto-retry dengan jeda bertingkat (5s, 10s, 20s)
+        if (_deviceWeatherRetryCount < _DEVICE_WEATHER_MAX_RETRIES) {
+            _deviceWeatherRetryCount++;
+            const delay = 5000 * Math.pow(2, _deviceWeatherRetryCount - 1);
+            console.log(`Retry cuaca alat ke-${_deviceWeatherRetryCount} dalam ${delay/1000}s...`);
+            
+            const descEl = document.getElementById('device-weather-desc');
+            if (descEl) descEl.textContent = `Mencoba ulang (${_deviceWeatherRetryCount}/${_DEVICE_WEATHER_MAX_RETRIES})...`;
+            
+            setTimeout(() => fetchDeviceWeatherData(), delay);
+        } else {
+            const tempEl = document.getElementById('device-weather-temp');
+            const descEl = document.getElementById('device-weather-desc');
+            if (tempEl) tempEl.textContent = '--°C';
+            if (descEl) descEl.textContent = 'Gagal memuat cuaca';
+        }
     }
 }
 
