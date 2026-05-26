@@ -1007,18 +1007,20 @@ async function fetchWeatherData(lat, lon) {
         // 1. Try Vercel Serverless Function first
         try {
             const url = `/api/weather?latitude=${targetLat}&longitude=${targetLon}`;
-            response = await fetchWithTimeout(url, {}, 3000);
+            response = await fetchWithTimeout(url, {}, 8000);
             if (response.ok) {
                 data = await response.json();
             }
-        } catch (e) {}
+        } catch (e) {
+            console.log('Vercel API fetch failed (possibly timeout/cold start):', e);
+        }
 
         // 2. Try Open-Meteo Direct if Vercel failed
         if (!data) {
             try {
                 console.log('Fetching directly from Open-Meteo...');
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
-                response = await fetchWithTimeout(url, {}, 4000);
+                response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
                 }
@@ -1033,7 +1035,7 @@ async function fetchWeatherData(lat, lon) {
                 console.log('Fetching Open-Meteo via Proxy...');
                 const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
                 const url = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
-                response = await fetchWithTimeout(url, {}, 5000);
+                response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
                 }
@@ -1047,7 +1049,7 @@ async function fetchWeatherData(lat, lon) {
             try {
                 console.log('Open-Meteo failed, falling back to local wttr.in bypass...');
                 const url = `https://wttr.in/${targetLat},${targetLon}?format=j1`;
-                response = await fetchWithTimeout(url, {}, 4000);
+                response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
                 }
@@ -1147,18 +1149,20 @@ async function fetchDeviceWeatherData() {
         // 1. Try Vercel Serverless Function first
         try {
             const url = `/api/weather?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}`;
-            response = await fetchWithTimeout(url, {}, 3000);
+            response = await fetchWithTimeout(url, {}, 8000);
             if (response.ok) {
                 data = await response.json();
             }
-        } catch (e) {}
+        } catch (e) {
+            console.log('Vercel API device fetch failed:', e);
+        }
 
         // 2. Try Open-Meteo Direct if Vercel failed
         if (!data) {
             try {
                 console.log('Fetching directly from Open-Meteo for device...');
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
-                response = await fetchWithTimeout(url, {}, 4000);
+                response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
                 }
@@ -1173,7 +1177,7 @@ async function fetchDeviceWeatherData() {
                 console.log('Fetching Open-Meteo via Proxy for device...');
                 const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
                 const url = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
-                response = await fetchWithTimeout(url, {}, 5000);
+                response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
                 }
@@ -1187,7 +1191,7 @@ async function fetchDeviceWeatherData() {
             try {
                 console.log('Open-Meteo device fetch failed, falling back to wttr.in...');
                 const url = `https://wttr.in/${LAMAJANG_LAT},${LAMAJANG_LON}?format=j1`;
-                response = await fetchWithTimeout(url, {}, 4000);
+                response = await fetchWithTimeout(url, {}, 8000);
                 if (response.ok) {
                     data = await response.json();
                 }
