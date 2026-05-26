@@ -8,6 +8,7 @@ auth.onAuthStateChanged(async (user) => {
     const views = document.querySelectorAll('.view-section');
     const viewAuth = document.getElementById('view-auth');
     const viewMonitoring = document.getElementById('view-monitoring');
+    const viewCuaca = document.getElementById('view-cuaca');
     const viewDarurat = document.getElementById('view-darurat');
     const viewLapor = document.getElementById('view-lapor');
     const viewSaran = document.getElementById('view-saran');
@@ -51,6 +52,7 @@ auth.onAuthStateChanged(async (user) => {
         if (isAdmin) {
             if (!viewAdminDash.innerHTML) {
                 viewAdminDash.innerHTML = await fetch('views/admin-dashboard.html?v=115').then(r => r.text());
+                viewCuaca.innerHTML = await fetch('views/cuaca.html?v=120').then(r => r.text());
                 viewAdminLapor.innerHTML = await fetch('views/admin-laporan.html?v=115').then(r => r.text());
                 viewAdminSaran.innerHTML = await fetch('views/admin-saran.html?v=115').then(r => r.text());
                 viewAdminMembers.innerHTML = await fetch('views/admin-members.html?v=115').then(r => r.text());
@@ -68,10 +70,11 @@ auth.onAuthStateChanged(async (user) => {
             startDataListener(); 
         } else {
             if (!viewMonitoring.innerHTML) {
-                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=115').then(r => r.text());
-                viewDarurat.innerHTML = await fetch('views/darurat.html?v=115').then(r => r.text());
-                viewLapor.innerHTML = await fetch('views/lapor.html?v=115').then(r => r.text());
-                viewSaran.innerHTML = await fetch('views/saran.html?v=115').then(r => r.text());
+                viewMonitoring.innerHTML = await fetch('views/monitoring.html?v=120').then(r => r.text());
+                viewCuaca.innerHTML = await fetch('views/cuaca.html?v=120').then(r => r.text());
+                viewDarurat.innerHTML = await fetch('views/darurat.html?v=120').then(r => r.text());
+                viewLapor.innerHTML = await fetch('views/lapor.html?v=120').then(r => r.text());
+                viewSaran.innerHTML = await fetch('views/saran.html?v=120').then(r => r.text());
             }
             if (userNav) userNav.style.display = 'flex';
             if (adminNav) adminNav.style.display = 'none';
@@ -82,6 +85,7 @@ auth.onAuthStateChanged(async (user) => {
             bindDOM();
             initChart(false);
             startDataListener();
+            startWeatherListener();
         }
     } else {
         if (profileWrapper) profileWrapper.style.display = 'none';

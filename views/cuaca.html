@@ -1,0 +1,115 @@
+<div class="monitoring-wrapper">
+    <h2 class="section-title">Prakiraan Cuaca & Peta Pantau</h2>
+
+    <!-- Top Row: Map and Weather Grid -->
+    <div class="dashboard-top-row" style="align-items: stretch;">
+        
+        <!-- Sisi Kiri: Peta Interaktif & Pencarian -->
+        <section class="map-section glass-panel" style="flex: 1.2; display: flex; flex-direction: column;">
+            <h3>Peta Pantau Cuaca</h3>
+            <span class="sensor-station-label" style="align-self: flex-start;">Peta Interaktif</span>
+            
+            <div class="map-search-wrapper" style="margin-bottom: 12px;">
+                <input type="text" id="map-search-input" class="map-search-input" placeholder="Cari kelurahan, kecamatan, atau kota...">
+                <button id="btn-map-search" class="map-search-btn">Cari</button>
+            </div>
+            
+            <div id="monitoring-map" style="width: 100%; height: 300px; border-radius: 8px; z-index: 1; border: 1px solid rgba(0,0,0,0.05);"></div>
+        </section>
+
+        <!-- Sisi Kanan: Weather Grid -->
+        <section class="weather-grid" id="weather-panel" style="flex: 1;">
+            <!-- Card 1: Temp & Condition -->
+            <div class="weather-card glass-panel">
+                <div class="weather-card-header">
+                    <div class="weather-icon icon-orange">
+                        <svg class="anim-spin-slow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                    </div>
+                    <span class="weather-label">Suhu</span>
+                </div>
+                <div class="weather-card-body">
+                    <span id="weather-temp" class="weather-value">--°C</span>
+                    <span id="weather-desc" class="weather-subtext">Memuat...</span>
+                </div>
+            </div>
+
+            <!-- Card 2: Kelembapan -->
+            <div class="weather-card glass-panel">
+                <div class="weather-card-header">
+                    <div class="weather-icon icon-blue">
+                        <svg class="anim-bounce-soft" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </div>
+                    <span class="weather-label">Kelembapan</span>
+                </div>
+                <div class="weather-card-body">
+                    <span id="weather-humidity" class="weather-value">--%</span>
+                    <span class="weather-subtext">Relatif</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Angin -->
+            <div class="weather-card glass-panel">
+                <div class="weather-card-header">
+                    <div class="weather-icon icon-teal">
+                        <svg class="anim-slide-x" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+                    </div>
+                    <span class="weather-label">Angin</span>
+                </div>
+                <div class="weather-card-body">
+                    <span id="weather-wind" class="weather-value">-- m/s</span>
+                    <span class="weather-subtext">Kecepatan</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Lokasi -->
+            <div class="weather-card glass-panel">
+                <div class="weather-card-header">
+                    <div class="weather-icon icon-red">
+                        <svg class="anim-bounce-pin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <span class="weather-label">Lokasi</span>
+                </div>
+                <div class="weather-card-body">
+                    <span id="weather-location" class="weather-value" style="font-size: 1.25rem">Memuat...</span>
+                    <span id="weather-subtext" class="weather-subtext">Pilih titik di peta</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Forecast Section -->
+    <div class="forecast-wrapper" style="margin-top: 20px;">
+        <section class="forecast-section glass-panel">
+            <div class="forecast-header">
+                <h3>Prakiraan Cuaca Hari Ini</h3>
+            </div>
+            <div class="hourly-scroll-area" id="hourly-forecast-container">
+                <div style="text-align:center; padding: 20px; font-size: 0.9rem; color: #64748b;">Memuat data...</div>
+            </div>
+            <div class="news-section-header" style="display:flex; align-items:center; gap:8px; margin-top:16px; margin-bottom:10px; padding-top:14px; border-top: 1px solid rgba(0,0,0,0.07);">
+                <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#ef4444,#f97316); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19 20H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4l2-2h4l2 2h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3zM5 6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:0.8rem; font-weight:700; color:#1e293b; font-family:'Nunito',sans-serif;">Berita Terkini</div>
+                    <div style="font-size:0.68rem; color:#64748b;">Banjir · Cuaca Ekstrem · Bandung</div>
+                </div>
+                <div id="news-refresh-badge" style="margin-left:auto; font-size:0.65rem; color:#94a3b8;">Memuat...</div>
+            </div>
+            <div class="news-container" id="weather-news-container" style="display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto; padding-right:2px;">
+                <div class="news-skeleton"></div>
+                <div class="news-skeleton"></div>
+                <div class="news-skeleton"></div>
+            </div>
+        </section>
+        
+        <section class="forecast-section glass-panel">
+            <div class="forecast-header">
+                <h3>Prakiraan Cuaca 7 Hari</h3>
+            </div>
+            <div class="daily-list" id="daily-forecast-container">
+                <div style="text-align:center; padding: 20px; font-size: 0.9rem; color: #64748b;">Memuat data...</div>
+            </div>
+        </section>
+    </div>
+</div>

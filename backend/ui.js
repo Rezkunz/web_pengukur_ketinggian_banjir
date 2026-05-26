@@ -46,6 +46,23 @@ function bindDOM() {
             const targetId = item.getAttribute('data-target');
             const targetEl = document.getElementById(targetId);
             if(targetEl) targetEl.classList.add('active');
+
+            // Saat tab Cuaca dibuka, perbaiki ukuran peta dan muat cuaca dinamis
+            if (targetId === 'view-cuaca') {
+                setTimeout(() => {
+                    if (typeof monitoringMap !== 'undefined' && monitoringMap) {
+                        monitoringMap.invalidateSize();
+                    } else if (typeof initMonitoringMap === 'function') {
+                        initMonitoringMap();
+                    }
+                    if (typeof fetchWeatherData === 'function') {
+                        fetchWeatherData();
+                    }
+                    if (typeof fetchWeatherNews === 'function') {
+                        fetchWeatherNews();
+                    }
+                }, 100);
+            }
         });
     });
 }

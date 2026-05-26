@@ -796,10 +796,15 @@ function startOfflineDetector() {
 // ─────────────────────────────────────────────
 // START: Weather Fetching Logic
 // ─────────────────────────────────────────────
-const WEATHER_LAT = '-6.984213743617759';
-const WEATHER_LON = '107.62672849717276';
+let weatherLat = -6.984213743617759;
+let weatherLon = 107.62672849717276;
+let weatherLocationName = 'Bojongsoang';
+const LAMAJANG_LAT = -6.984214864265832;
+const LAMAJANG_LON = 107.62672526292504;
 let weatherIntervalTimer = null;
 let useProxyDirectly = false;
+let monitoringMap = null;
+let weatherMarker = null;
 
 async function fetchWithTimeout(url, options = {}, timeout = 2000) {
     const controller = new AbortController();
@@ -883,12 +888,21 @@ async function fetchWeatherNews() {
     const badge = document.getElementById('news-refresh-badge');
     if (!container) return;
 
-    // Google News RSS via rss2json — query khusus: banjir, cuaca ekstrem, bandung
     const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=banjir+OR+%22cuaca+ekstrem%22+OR+%22banjir+bandung%22+OR+bmkg&hl=id&gl=ID&ceid=ID:id');
-    const url = `//api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
 
     try {
-        const response = await fetchWithFallback(url);
+        let response;
+        try {
+            response = await fetchWithTimeout('/api/news', {}, 3000);
+            if (!response.ok || response.status === 404) {
+                throw new Error('Vercel API not found');
+            }
+        } catch (e) {
+            console.log('Vercel API for news not found, fetching directly from rss2json...');
+            const url = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
+            response = await fetchWithTimeout(url, {}, 4000);
+        }
+
         if (!response.ok) throw new Error('Network error');
         const data = await response.json();
 
@@ -983,25 +997,68 @@ function getWttrIconImg(code) {
     return `<img src="https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/${icon}.svg" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
 }
 
-async function fetchWeatherData() {
+async function fetchWeatherData(lat, lon) {
+    const targetLat = lat !== undefined ? lat : weatherLat;
+    const targetLon = lon !== undefined ? lon : weatherLon;
     try {
-        // Try Vercel Serverless Function first (production proxy for Open-Meteo)
-        let url = `/api/weather?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}`;
         let response;
+        let data;
+
+        // 1. Try Vercel Serverless Function first
         try {
+            const url = `/api/weather?latitude=${targetLat}&longitude=${targetLon}`;
             response = await fetchWithTimeout(url, {}, 3000);
-            if (response.status === 404) {
-                throw new Error('Vercel API function not found');
+            if (response.ok) {
+                data = await response.json();
             }
-        } catch (e) {
-            console.log('Vercel API proxy not available, falling back to local wttr.in bypass...');
-            // Fallback: local wttr.in query bypasses ISP open-meteo blocks
-            url = `//wttr.in/${WEATHER_LAT},${WEATHER_LON}?format=j1`;
-            response = await fetchWithFallback(url, { headers: { 'User-Agent': 'curl/7.68.0' } });
+        } catch (e) {}
+
+        // 2. Try Open-Meteo Direct if Vercel failed
+        if (!data) {
+            try {
+                console.log('Fetching directly from Open-Meteo...');
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                response = await fetchWithTimeout(url, {}, 4000);
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (e) {
+                console.log('Open-Meteo direct fetch failed:', e);
+            }
         }
 
-        if (!response.ok) throw new Error('Fetch failed');
-        const data = await response.json();
+        // 3. Try Open-Meteo via Codetabs Proxy
+        if (!data) {
+            try {
+                console.log('Fetching Open-Meteo via Proxy...');
+                const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                const url = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
+                response = await fetchWithTimeout(url, {}, 5000);
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (e) {
+                console.log('Open-Meteo proxy fetch failed:', e);
+            }
+        }
+
+        // 4. Fallback to wttr.in if Open-Meteo completely failed
+        if (!data) {
+            try {
+                console.log('Open-Meteo failed, falling back to local wttr.in bypass...');
+                const url = `https://wttr.in/${targetLat},${targetLon}?format=j1`;
+                response = await fetchWithTimeout(url, {}, 4000);
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (e) {
+                console.log('wttr.in fetch failed:', e);
+            }
+        }
+
+        if (!data) {
+            throw new Error('All weather data sources failed');
+        }
         
         if (data.current_condition) {
             // wttr.in format
@@ -1018,8 +1075,15 @@ async function fetchWeatherData() {
         }
     } catch (err) {
         console.warn('Gagal memuat cuaca:', err);
+        const tempEl = document.getElementById('weather-temp');
         const descEl = document.getElementById('weather-desc');
+        if (tempEl) tempEl.textContent = '--°C';
         if (descEl) descEl.textContent = 'Gagal memuat cuaca';
+        
+        const hc = document.getElementById('hourly-forecast-container');
+        const dc = document.getElementById('daily-forecast-container');
+        if (hc) hc.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:12px;font-size:0.9rem;">Gagal memuat prakiraan per jam</div>';
+        if (dc) dc.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:12px;font-size:0.9rem;">Gagal memuat prakiraan harian</div>';
     }
 }
 
@@ -1027,6 +1091,7 @@ function updateWeatherUIFromWttr(data) {
     const tempEl = document.getElementById('weather-temp');
     const descEl = document.getElementById('weather-desc');
     const locEl = document.getElementById('weather-location');
+    const subEl = document.getElementById('weather-subtext');
     const humEl = document.getElementById('weather-humidity');
     const windEl = document.getElementById('weather-wind');
 
@@ -1037,9 +1102,19 @@ function updateWeatherUIFromWttr(data) {
         if (data.nearest_area && data.nearest_area.length > 0) {
             const area = data.nearest_area[0];
             const name = area.areaName?.[0]?.value || 'Bojongsoang';
+            weatherLocationName = name;
             locEl.textContent = name;
         } else {
+            weatherLocationName = 'Bojongsoang';
             locEl.textContent = 'Bojongsoang';
+        }
+    }
+    if (subEl) {
+        if (data.nearest_area && data.nearest_area.length > 0) {
+            const area = data.nearest_area[0];
+            subEl.textContent = area.region?.[0]?.value || 'Jawa Barat';
+        } else {
+            subEl.textContent = 'Jawa Barat';
         }
     }
     if (humEl) humEl.textContent = `${cur.humidity}%`;
@@ -1059,7 +1134,119 @@ function updateWeatherUIFromMeteo(data) {
     const current = data.current;
     if (tempEl) tempEl.textContent = `${Math.round(current.temperature_2m)}°C`;
     if (descEl) descEl.textContent = getWmoDescription(current.weather_code);
-    if (locEl) locEl.textContent = 'Bojongsoang';
+    if (locEl) locEl.textContent = weatherLocationName;
+    if (humEl) humEl.textContent = `${current.relative_humidity_2m}%`;
+    if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
+}
+
+async function fetchDeviceWeatherData() {
+    try {
+        let response;
+        let data;
+
+        // 1. Try Vercel Serverless Function first
+        try {
+            const url = `/api/weather?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}`;
+            response = await fetchWithTimeout(url, {}, 3000);
+            if (response.ok) {
+                data = await response.json();
+            }
+        } catch (e) {}
+
+        // 2. Try Open-Meteo Direct if Vercel failed
+        if (!data) {
+            try {
+                console.log('Fetching directly from Open-Meteo for device...');
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                response = await fetchWithTimeout(url, {}, 4000);
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (e) {
+                console.log('Open-Meteo device fetch failed:', e);
+            }
+        }
+
+        // 3. Try Open-Meteo via Codetabs Proxy
+        if (!data) {
+            try {
+                console.log('Fetching Open-Meteo via Proxy for device...');
+                const rawUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
+                const url = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
+                response = await fetchWithTimeout(url, {}, 5000);
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (e) {
+                console.log('Open-Meteo proxy fetch failed:', e);
+            }
+        }
+
+        // 4. Fallback to wttr.in if Open-Meteo completely failed
+        if (!data) {
+            try {
+                console.log('Open-Meteo device fetch failed, falling back to wttr.in...');
+                const url = `https://wttr.in/${LAMAJANG_LAT},${LAMAJANG_LON}?format=j1`;
+                response = await fetchWithTimeout(url, {}, 4000);
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (e) {
+                console.log('wttr.in device fetch failed:', e);
+            }
+        }
+
+        if (!data) {
+            throw new Error('All weather data sources failed');
+        }
+        
+        if (data.current_condition) {
+            updateDeviceWeatherUIFromWttr(data);
+        } else if (data.current) {
+            updateDeviceWeatherUIFromMeteo(data);
+        }
+    } catch (err) {
+        console.warn('Gagal memuat cuaca alat:', err);
+        const tempEl = document.getElementById('device-weather-temp');
+        const descEl = document.getElementById('device-weather-desc');
+        if (tempEl) tempEl.textContent = '--°C';
+        if (descEl) descEl.textContent = 'Gagal memuat cuaca';
+    }
+}
+
+function updateDeviceWeatherUIFromWttr(data) {
+    const tempEl = document.getElementById('device-weather-temp');
+    const descEl = document.getElementById('device-weather-desc');
+    const locEl = document.getElementById('device-weather-location');
+    const subEl = document.getElementById('device-weather-subtext');
+    const humEl = document.getElementById('device-weather-humidity');
+    const windEl = document.getElementById('device-weather-wind');
+
+    const cur = data.current_condition[0];
+    if (tempEl) tempEl.textContent = `${cur.temp_C}°C`;
+    if (descEl) descEl.textContent = getWttrDescription(cur.weatherCode);
+    if (locEl) locEl.textContent = 'Desa Lamajang';
+    if (subEl) subEl.textContent = 'Bojongsoang, Bandung';
+    if (humEl) humEl.textContent = `${cur.humidity}%`;
+    if (windEl) {
+        const speedMs = (parseFloat(cur.windspeedKmph) / 3.6).toFixed(1);
+        windEl.textContent = `${speedMs} m/s`;
+    }
+}
+
+function updateDeviceWeatherUIFromMeteo(data) {
+    const tempEl = document.getElementById('device-weather-temp');
+    const descEl = document.getElementById('device-weather-desc');
+    const locEl = document.getElementById('device-weather-location');
+    const subEl = document.getElementById('device-weather-subtext');
+    const humEl = document.getElementById('device-weather-humidity');
+    const windEl = document.getElementById('device-weather-wind');
+
+    const current = data.current;
+    if (tempEl) tempEl.textContent = `${Math.round(current.temperature_2m)}°C`;
+    if (descEl) descEl.textContent = getWmoDescription(current.weather_code);
+    if (locEl) locEl.textContent = 'Desa Lamajang';
+    if (subEl) subEl.textContent = 'Bojongsoang, Bandung';
     if (humEl) humEl.textContent = `${current.relative_humidity_2m}%`;
     if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
 }
@@ -1223,14 +1410,143 @@ function renderDailyForecastFromMeteo(daily) {
 }
 
 function startWeatherListener() {
-    fetchWeatherData();
-    fetchWeatherNews();
-    // Update setiap 30 menit
+    fetchDeviceWeatherData();
+    // Cuaca dinamis dan peta diinisialisasi saat tab Cuaca dibuka pertama kali (di ui.js)
     if (weatherIntervalTimer) clearInterval(weatherIntervalTimer);
     weatherIntervalTimer = setInterval(() => {
-        fetchWeatherData();
-        fetchWeatherNews();
+        fetchDeviceWeatherData();
+        if (typeof monitoringMap !== 'undefined' && monitoringMap) {
+            fetchWeatherData(weatherLat, weatherLon);
+        }
     }, 30 * 60 * 1000);
+}
+
+function initMonitoringMap() {
+    const mapContainer = document.getElementById('monitoring-map');
+    if (!mapContainer) return;
+
+    if (monitoringMap) {
+        monitoringMap.remove();
+        monitoringMap = null;
+    }
+
+    monitoringMap = L.map('monitoring-map', {
+        zoomControl: true,
+        scrollWheelZoom: false
+    }).setView([weatherLat, weatherLon], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(monitoringMap);
+
+    // Fix popup margin (agar tidak nabrak tombol X)
+    const style = document.createElement('style');
+    style.textContent = '.leaflet-popup-content { margin: 12px 28px 12px 16px !important; }';
+    document.head.appendChild(style);
+
+    // Icon pin biru (sensor statis)
+    const sensorIcon = L.divIcon({
+        html: `<div class="map-pin-pulse">
+                 <div class="pulse blue-pulse"></div>
+                 <svg viewBox="0 0 24 24" class="map-pin-svg blue-pin">
+                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                 </svg>
+               </div>`,
+        className: 'custom-div-icon sensor-pin',
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -32]
+    });
+
+    // Icon pin merah (cuaca dinamis)
+    const weatherIcon = L.divIcon({
+        html: `<div class="map-pin-pulse">
+                 <div class="pulse red-pulse"></div>
+                 <svg viewBox="0 0 24 24" class="map-pin-svg red-pin">
+                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                 </svg>
+               </div>`,
+        className: 'custom-div-icon weather-pin',
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -32]
+    });
+
+    // Pin biru: Sensor statis Desa Lamajang
+    const sensorMarker = L.marker([LAMAJANG_LAT, LAMAJANG_LON], { icon: sensorIcon }).addTo(monitoringMap);
+    sensorMarker.bindPopup(`
+        <div style="font-family:'Outfit',sans-serif;text-align:center;">
+            <strong style="color:#0ea5e9;font-size:0.9rem;">📍 Sensor Tinggi Air</strong><br>
+            <span style="font-size:0.8rem;font-weight:600;color:#475569;">Desa Lamajang</span><br>
+            <small style="color:#94a3b8;display:block;margin-top:4px;">Bojongsoang, Bandung</small>
+        </div>`);
+
+    // Pin merah: Cuaca dinamis (draggable)
+    weatherMarker = L.marker([weatherLat, weatherLon], { icon: weatherIcon, draggable: true }).addTo(monitoringMap);
+    weatherMarker.bindPopup(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+
+    const bounds = L.latLngBounds([[LAMAJANG_LAT, LAMAJANG_LON], [weatherLat, weatherLon]]);
+    monitoringMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+
+    // Drag pin merah → update cuaca
+    weatherMarker.on('dragend', async function() {
+        const pos = weatherMarker.getLatLng();
+        weatherLat = pos.lat;
+        weatherLon = pos.lng;
+        await fetchWeatherData(weatherLat, weatherLon);
+        weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`);
+        weatherMarker.openPopup();
+    });
+
+    // Klik peta → pindahkan pin merah
+    monitoringMap.on('click', async function(e) {
+        weatherMarker.setLatLng([e.latlng.lat, e.latlng.lng]);
+        weatherLat = e.latlng.lat;
+        weatherLon = e.latlng.lng;
+        await fetchWeatherData(weatherLat, weatherLon);
+        weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+    });
+
+    // Pencarian lokasi
+    const searchBtn   = document.getElementById('btn-map-search');
+    const searchInput = document.getElementById('map-search-input');
+
+    async function handleMapSearch() {
+        const query = searchInput ? searchInput.value.trim() : '';
+        if (!query) return;
+        const origText = searchBtn ? searchBtn.textContent : '';
+        if (searchBtn) { searchBtn.textContent = '⏳'; searchBtn.disabled = true; }
+
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+            const res = await fetchWithTimeout(url, { headers: { 'User-Agent': 'safe-floodmonitor/1.0' } }, 6000);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const newLat = parseFloat(data[0].lat);
+                const newLon = parseFloat(data[0].lon);
+                weatherMarker.setLatLng([newLat, newLon]);
+                weatherLat = newLat;
+                weatherLon = newLon;
+                monitoringMap.flyTo([newLat, newLon], 13);
+                await fetchWeatherData(newLat, newLon);
+                weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+            } else {
+                alert('Lokasi tidak ditemukan. Coba nama kota/kecamatan lain.');
+            }
+        } catch (err) {
+            console.warn('Pencarian gagal:', err);
+            alert('Gagal mencari lokasi. Periksa koneksi internet.');
+        } finally {
+            if (searchBtn) { searchBtn.textContent = origText; searchBtn.disabled = false; }
+        }
+    }
+
+    if (searchBtn) searchBtn.addEventListener('click', handleMapSearch);
+    if (searchInput) searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleMapSearch(); });
+
+    // Muat cuaca awal untuk wilayah default
+    fetchWeatherData(weatherLat, weatherLon);
+    fetchWeatherNews();
 }
 
 // ─────────────────────────────────────────────

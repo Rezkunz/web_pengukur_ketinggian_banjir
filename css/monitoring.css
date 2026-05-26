@@ -1391,3 +1391,190 @@ body.dark-mode .temp-max { color: #e2e8f0 !important; }
     from { transform: scale(1); box-shadow: 0 2px 5px rgba(239,68,68,0.1); }
     to { transform: scale(1.03); box-shadow: 0 4px 10px rgba(239,68,68,0.3); }
 }
+
+/* =====================================================
+   MAP AND STATION STYLING
+   ===================================================== */
+.sensor-station-label {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0ea5e9; /* Warna biru senada dengan marker sensor */
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    border-radius: 6px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+body.dark-mode .sensor-station-label {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.map-section {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Peta Search Bar Styling */
+.map-search-wrapper {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 450px;
+}
+
+.map-search-input {
+    flex: 1;
+    padding: 8px 14px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    outline: none;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--text-primary);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+body.dark-mode .map-search-input {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255,255,255,0.1);
+}
+
+.map-search-input:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.map-search-btn {
+    padding: 8px 18px;
+    background: #0ea5e9;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(14, 165, 233, 0.25);
+    transition: all 0.2s ease;
+}
+
+.map-search-btn:hover {
+    background: #0284c7;
+    box-shadow: 0 4px 8px rgba(2, 132, 199, 0.3);
+    transform: translateY(-1px);
+}
+
+.map-search-btn:active {
+    transform: translateY(0);
+}
+
+/* Custom DivIcon default overrides */
+.custom-div-icon {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Custom Marker Styling for Leaflet */
+.map-pin-pulse {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-pin-svg {
+    width: 36px;
+    height: 36px;
+    z-index: 2;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.map-pin-svg.red-pin {
+    fill: #ef4444; /* Merah untuk ramalan cuaca */
+}
+
+.map-pin-svg.blue-pin {
+    fill: #0ea5e9; /* Biru untuk lokasi sensor fisik */
+}
+
+/* Hover effects for interactive weather pin */
+.weather-pin:hover .map-pin-svg {
+    transform: scale(1.15) translateY(-3px);
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+}
+
+.map-pin-pulse .pulse {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    z-index: 1;
+    bottom: -2px; /* Pusatkan denyut di bagian bawah ujung tajam pin */
+    left: 6px;
+    animation: pinPulse 2s infinite ease-out;
+}
+
+.map-pin-pulse .pulse.red-pulse {
+    background: rgba(239, 68, 68, 0.5);
+}
+
+.map-pin-pulse .pulse.blue-pulse {
+    background: rgba(14, 165, 233, 0.5);
+}
+
+@keyframes pinPulse {
+    0% {
+        transform: scale(0.2);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* Leaflet Popup Styling Customization */
+.leaflet-popup-content-wrapper {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 12px !important;
+    color: #1e293b !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.82rem !important;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1) !important;
+}
+
+body.dark-mode .leaflet-popup-content-wrapper {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f1f5f9 !important;
+}
+
+.leaflet-popup-content {
+    margin: 12px 28px 12px 16px !important;
+    line-height: 1.4;
+    color: inherit !important;
+}
+
+.leaflet-popup-tip {
+    background: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.dark-mode .leaflet-popup-tip {
+    background: rgba(30, 41, 59, 0.9) !important;
+}
+

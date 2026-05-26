@@ -9,11 +9,11 @@
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' https:;
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com;
-        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://*.firebase.com https://api.openweathermap.org https://api.open-meteo.com http://api.open-meteo.com https://api.rss2json.com http://api.rss2json.com https://api-berita-indonesia.vercel.app https://api.allorigins.win https://api.cors.lol;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://unpkg.com;
+        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://*.firebase.com https://api.openweathermap.org https://api.open-meteo.com http://api.open-meteo.com https://api.rss2json.com http://api.rss2json.com https://api-berita-indonesia.vercel.app https://api.allorigins.win https://api.cors.lol https://wttr.in http://wttr.in http://nominatim.openstreetmap.org https://nominatim.openstreetmap.org;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;
         font-src 'self' https://fonts.gstatic.com;
-        img-src 'self' data: https: https://basmilius.github.io https://www.amcharts.com;
+        img-src 'self' data: https: https://basmilius.github.io https://www.amcharts.com https://unpkg.com https://*.tile.openstreetmap.org;
         frame-src https://*.firebaseapp.com https://*.firebasedatabase.app;
         object-src 'none';
     ">
@@ -79,6 +79,10 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Leaflet.js (Peta Interaktif) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/base.css?v=120">
@@ -151,6 +155,12 @@
                     <path d="M12 3L2 12h3v8h14v-8h3L12 3zm0 2.83l7 6.17v6h-14v-6l7-6.17z" />
                 </svg>
                 <span>Monitor</span>
+            </div>
+            <div class="nav-item" data-target="view-cuaca" role="button" tabindex="0" aria-label="Navigasi Cuaca">
+                <svg viewBox="0 0 24 24">
+                    <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/>
+                </svg>
+                <span>Cuaca</span>
             </div>
             <div class="nav-item" data-target="view-darurat" role="button" tabindex="0" aria-label="Navigasi Darurat">
                 <svg viewBox="0 0 24 24">
@@ -232,6 +242,10 @@
                 <span>🎛️</span>
                 <span>Dashboard</span>
             </div>
+            <div class="nav-item" data-target="view-cuaca" role="button" tabindex="0" aria-label="Navigasi Cuaca">
+                <span>☁️</span>
+                <span>Cuaca</span>
+            </div>
             <div class="nav-item" data-target="view-admin-laporan" role="button" tabindex="0" aria-label="Navigasi Admin Laporan">
                 <span>📋</span>
                 <span>Laporan</span>
@@ -299,7 +313,10 @@
             <!-- VIEW 1: MONITORING BANJIR -->
             <div id="view-monitoring" class="view-section"></div>
 
-            <!-- VIEW 2: KONTAK DARURAT -->
+            <!-- VIEW 2: CUACA -->
+            <div id="view-cuaca" class="view-section"></div>
+
+            <!-- VIEW 3: KONTAK DARURAT -->
             <div id="view-darurat" class="view-section"></div>
 
             <!-- VIEW 3: LAPOR KEJADIAN -->
