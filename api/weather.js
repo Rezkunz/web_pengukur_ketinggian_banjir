@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { latitude, longitude } = req.query;
+  const { latitude, longitude, allowBmkg } = req.query;
   if (!latitude || !longitude) {
     return res.status(400).json({ error: 'Missing latitude or longitude' });
   }
@@ -18,6 +18,8 @@ module.exports = async (req, res) => {
   const proxy1 = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`;
   const proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
   const bmkgUrl = 'https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=32.04.08.2005';
+  const sevenTimerUrl = `https://www.7timer.info/bin/api.pl?lon=${longitude}&lat=${latitude}&product=civil&output=json`;
+  const wttrUrl = `https://wttr.in/${latitude},${longitude}?format=j1`;
 
   async function tryJson(url, timeout = 2500) {
     const controller = new AbortController();
@@ -38,9 +40,17 @@ module.exports = async (req, res) => {
     let data = await tryJson(rawUrl);
     if (data) return res.status(200).json(data);
 
-    data = await tryJson(bmkgUrl, 8000);
-    if (data) {
-      data.source = 'bmkg';
+    if (allowBmkg === '1') {
+      data = await tryJson(bmkgUrl, 8000);
+      if (data) {
+        data.source = 'bmkg';
+        return res.status(200).json(data);
+      }
+    }
+
+    data = await tryJson(sevenTimerUrl, 10000);
+    if (data?.dataseries) {
+      data.source = '7timer';
       return res.status(200).json(data);
     }
 
@@ -48,6 +58,9 @@ module.exports = async (req, res) => {
     if (data) return res.status(200).json(data);
 
     data = await tryJson(proxy2);
+    if (data) return res.status(200).json(data);
+
+    data = await tryJson(wttrUrl, 5000);
     if (data) return res.status(200).json(data);
 
     throw new Error('All weather providers failed');

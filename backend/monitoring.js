@@ -805,6 +805,21 @@ let weatherIntervalTimer = null;
 let useProxyDirectly = false;
 let monitoringMap = null;
 let weatherMarker = null;
+let weatherLocationSubtext = 'Bojongsoang, Bandung';
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const toRad = deg => deg * Math.PI / 180;
+    const earthRadiusKm = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function isNearDeviceArea(lat, lon) {
+    return getDistanceKm(Number(lat), Number(lon), LAMAJANG_LAT, LAMAJANG_LON) <= 8;
+}
 
 async function fetchWithTimeout(url, options = {}, timeout = 2000) {
     const controller = new AbortController();
@@ -883,6 +898,47 @@ function getWmoIconImg(code) {
     return `<img src="https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/${icon}.svg" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
 }
 
+function isSevenTimerWeatherData(data) {
+    return data && data.source === '7timer' && Array.isArray(data.dataseries);
+}
+
+function getSevenTimerInitDate(data) {
+    const init = String(data.init || '');
+    if (init.length < 10) return new Date();
+    const year = Number(init.slice(0, 4));
+    const month = Number(init.slice(4, 6)) - 1;
+    const day = Number(init.slice(6, 8));
+    const hour = Number(init.slice(8, 10));
+    return new Date(Date.UTC(year, month, day, hour));
+}
+
+function getSevenTimerDate(data, slot) {
+    const date = getSevenTimerInitDate(data);
+    date.setUTCHours(date.getUTCHours() + Number(slot.timepoint || 0));
+    return date;
+}
+
+function getSevenTimerDescription(weather = '') {
+    const value = weather.toLowerCase();
+    if (value.includes('clear')) return 'Cerah';
+    if (value.includes('pcloudy')) return 'Cerah Berawan';
+    if (value.includes('cloudy')) return 'Berawan';
+    if (value.includes('rain') || value.includes('shower')) return value.includes('light') ? 'Hujan Ringan' : 'Hujan';
+    if (value.includes('humid')) return 'Lembap';
+    if (value.includes('fog')) return 'Berkabut';
+    return 'Berawan';
+}
+
+function getSevenTimerIconImg(weather = '') {
+    const value = weather.toLowerCase();
+    let icon = 'cloudy';
+    if (value.includes('clear')) icon = 'day';
+    else if (value.includes('pcloudy')) icon = 'cloudy-day-1';
+    else if (value.includes('rain') || value.includes('shower')) icon = value.includes('light') ? 'rainy-4' : 'rainy-6';
+    else if (value.includes('thunder')) icon = 'thunder';
+    return `<img src="https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/${icon}.svg" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
+}
+
 function isBmkgWeatherData(data) {
     return data && data.lokasi && Array.isArray(data.data) && Array.isArray(data.data[0]?.cuaca);
 }
@@ -918,6 +974,51 @@ async function fetchBmkgWeatherData() {
     const data = await response.json();
     data.source = 'bmkg';
     return data;
+}
+
+function formatNominatimLocation(place) {
+    const address = place?.address || {};
+    const name = address.village || address.town || address.city || address.suburb ||
+        address.municipality || address.county || place?.name || 'Lokasi dipilih';
+    const region = address.state || address.region || address.county || 'Indonesia';
+    return { name, subtext: region };
+}
+
+async function updateWeatherLocationFromCoords(lat, lon) {
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=13&addressdetails=1`;
+        const response = await fetchWithTimeout(url, { headers: { 'User-Agent': 'safe-floodmonitor/1.0' } }, 5000);
+        if (!response.ok) throw new Error('Reverse geocode failed');
+        const data = await response.json();
+        const location = formatNominatimLocation(data);
+        weatherLocationName = location.name;
+        weatherLocationSubtext = location.subtext;
+    } catch (error) {
+        console.log('Reverse geocode failed:', error);
+        weatherLocationName = `${Number(lat).toFixed(3)}, ${Number(lon).toFixed(3)}`;
+        weatherLocationSubtext = 'Lokasi peta';
+    }
+
+    const locEl = document.getElementById('weather-location');
+    const subEl = document.getElementById('weather-subtext');
+    if (locEl) locEl.textContent = weatherLocationName;
+    if (subEl) subEl.textContent = weatherLocationSubtext;
+}
+
+function setWeatherLoadingState() {
+    const tempEl = document.getElementById('weather-temp');
+    const descEl = document.getElementById('weather-desc');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+    const hc = document.getElementById('hourly-forecast-container');
+    const dc = document.getElementById('daily-forecast-container');
+
+    if (tempEl) tempEl.textContent = '--\u00B0C';
+    if (descEl) descEl.textContent = 'Memuat...';
+    if (humEl) humEl.textContent = '--%';
+    if (windEl) windEl.textContent = '-- m/s';
+    if (hc) hc.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:12px;font-size:0.9rem;">Memuat prakiraan per jam...</div>';
+    if (dc) dc.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:12px;font-size:0.9rem;">Memuat prakiraan harian...</div>';
 }
 
 async function fetchWeatherNews() {
@@ -1037,14 +1138,15 @@ function getWttrIconImg(code) {
 async function fetchWeatherData(lat, lon) {
     const targetLat = lat !== undefined ? lat : weatherLat;
     const targetLon = lon !== undefined ? lon : weatherLon;
+    const allowBmkgFallback = isNearDeviceArea(targetLat, targetLon);
     try {
         let response;
         let data;
 
         // 1. Try Vercel Serverless Function first
         try {
-            const url = `/api/weather?latitude=${targetLat}&longitude=${targetLon}`;
-            response = await fetchWithTimeout(url, {}, 8000);
+            const url = `/api/weather?latitude=${targetLat}&longitude=${targetLon}&allowBmkg=${allowBmkgFallback ? '1' : '0'}`;
+            response = await fetchWithTimeout(url, {}, 13000);
             if (response.ok) {
                 data = await response.json();
             }
@@ -1066,8 +1168,8 @@ async function fetchWeatherData(lat, lon) {
             }
         }
 
-        // 3. Official BMKG fallback for Bojongsoang area
-        if (!data) {
+        // 3. Official BMKG fallback only around the device/default area
+        if (!data && allowBmkgFallback) {
             try {
                 console.log('Open-Meteo failed, falling back to BMKG Bojongsoang...');
                 data = await fetchBmkgWeatherData();
@@ -1091,7 +1193,22 @@ async function fetchWeatherData(lat, lon) {
             }
         }
 
-        // 5. Fallback to wttr.in if Open-Meteo completely failed
+        // 5. Fallback to 7Timer for coordinate-based multi-day forecast
+        if (!data) {
+            try {
+                console.log('Open-Meteo failed, falling back to 7Timer...');
+                const url = `https://www.7timer.info/bin/api.pl?lon=${targetLon}&lat=${targetLat}&product=civil&output=json`;
+                response = await fetchWithTimeout(url, {}, 9000);
+                if (response.ok) {
+                    data = await response.json();
+                    data.source = '7timer';
+                }
+            } catch (e) {
+                console.log('7Timer fetch failed:', e);
+            }
+        }
+
+        // 6. Fallback to wttr.in if other coordinate-based providers failed
         if (!data) {
             try {
                 console.log('Open-Meteo failed, falling back to local wttr.in bypass...');
@@ -1125,6 +1242,10 @@ async function fetchWeatherData(lat, lon) {
             updateWeatherUIFromBmkg(data);
             renderHourlyForecastFromBmkg(data);
             renderDailyForecastFromBmkg(data);
+        } else if (isSevenTimerWeatherData(data)) {
+            updateWeatherUIFromSevenTimer(data);
+            renderHourlyForecastFromSevenTimer(data);
+            renderDailyForecastFromSevenTimer(data);
         }
     } catch (err) {
         console.warn('Gagal memuat cuaca:', err);
@@ -1154,20 +1275,20 @@ function updateWeatherUIFromWttr(data) {
     if (locEl) {
         if (data.nearest_area && data.nearest_area.length > 0) {
             const area = data.nearest_area[0];
-            const name = area.areaName?.[0]?.value || 'Bojongsoang';
+            const name = weatherLocationName || area.areaName?.[0]?.value || 'Bojongsoang';
             weatherLocationName = name;
             locEl.textContent = name;
         } else {
-            weatherLocationName = 'Bojongsoang';
-            locEl.textContent = 'Bojongsoang';
+            weatherLocationName = weatherLocationName || 'Bojongsoang';
+            locEl.textContent = weatherLocationName;
         }
     }
     if (subEl) {
         if (data.nearest_area && data.nearest_area.length > 0) {
             const area = data.nearest_area[0];
-            subEl.textContent = area.region?.[0]?.value || 'Jawa Barat';
+            subEl.textContent = weatherLocationSubtext || area.region?.[0]?.value || 'Jawa Barat';
         } else {
-            subEl.textContent = 'Jawa Barat';
+            subEl.textContent = weatherLocationSubtext || 'Jawa Barat';
         }
     }
     if (humEl) humEl.textContent = `${cur.humidity}%`;
@@ -1188,6 +1309,8 @@ function updateWeatherUIFromMeteo(data) {
     if (tempEl) tempEl.textContent = `${Math.round(current.temperature_2m)}°C`;
     if (descEl) descEl.textContent = getWmoDescription(current.weather_code);
     if (locEl) locEl.textContent = weatherLocationName;
+    const subEl = document.getElementById('weather-subtext');
+    if (subEl) subEl.textContent = weatherLocationSubtext;
     if (humEl) humEl.textContent = `${current.relative_humidity_2m}%`;
     if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
 }
@@ -1211,6 +1334,24 @@ function updateWeatherUIFromBmkg(data) {
     if (windEl) windEl.textContent = `${current.ws} m/s`;
 }
 
+function updateWeatherUIFromSevenTimer(data) {
+    const tempEl = document.getElementById('weather-temp');
+    const descEl = document.getElementById('weather-desc');
+    const locEl = document.getElementById('weather-location');
+    const subEl = document.getElementById('weather-subtext');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+    const current = data.dataseries[0];
+
+    if (!current) return;
+    if (tempEl) tempEl.textContent = `${Math.round(current.temp2m)}\u00B0C`;
+    if (descEl) descEl.textContent = getSevenTimerDescription(current.weather);
+    if (locEl) locEl.textContent = weatherLocationName;
+    if (subEl) subEl.textContent = weatherLocationSubtext;
+    if (humEl) humEl.textContent = current.rh2m || '--%';
+    if (windEl) windEl.textContent = `${current.wind10m?.speed ?? '--'} m/s`;
+}
+
 let _deviceWeatherRetryCount = 0;
 const _DEVICE_WEATHER_MAX_RETRIES = 3;
 
@@ -1221,7 +1362,7 @@ async function fetchDeviceWeatherData() {
 
         // 1. Try Vercel Serverless Function first
         try {
-            const url = `/api/weather?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}`;
+            const url = `/api/weather?latitude=${LAMAJANG_LAT}&longitude=${LAMAJANG_LON}&allowBmkg=1`;
             response = await fetchWithTimeout(url, {}, 8000);
             if (response.ok) {
                 data = await response.json();
@@ -1296,6 +1437,8 @@ async function fetchDeviceWeatherData() {
             updateDeviceWeatherUIFromMeteo(data);
         } else if (isBmkgWeatherData(data)) {
             updateDeviceWeatherUIFromBmkg(data);
+        } else if (isSevenTimerWeatherData(data)) {
+            updateDeviceWeatherUIFromSevenTimer(data);
         }
     } catch (err) {
         console.warn('Gagal memuat cuaca alat:', err);
@@ -1373,6 +1516,24 @@ function updateDeviceWeatherUIFromBmkg(data) {
     if (subEl) subEl.textContent = [lokasi.kecamatan, lokasi.kotkab].filter(Boolean).join(', ') || 'Bojongsoang, Bandung';
     if (humEl) humEl.textContent = `${current.hu}%`;
     if (windEl) windEl.textContent = `${current.ws} m/s`;
+}
+
+function updateDeviceWeatherUIFromSevenTimer(data) {
+    const tempEl = document.getElementById('device-weather-temp');
+    const descEl = document.getElementById('device-weather-desc');
+    const locEl = document.getElementById('device-weather-location');
+    const subEl = document.getElementById('device-weather-subtext');
+    const humEl = document.getElementById('device-weather-humidity');
+    const windEl = document.getElementById('device-weather-wind');
+    const current = data.dataseries[0];
+
+    if (!current) return;
+    if (tempEl) tempEl.textContent = `${Math.round(current.temp2m)}\u00B0C`;
+    if (descEl) descEl.textContent = getSevenTimerDescription(current.weather);
+    if (locEl) locEl.textContent = 'Desa Lamajang';
+    if (subEl) subEl.textContent = 'Bojongsoang, Bandung';
+    if (humEl) humEl.textContent = current.rh2m || '--%';
+    if (windEl) windEl.textContent = `${current.wind10m?.speed ?? '--'} m/s`;
 }
 
 function renderHourlyForecast(hourlyOrDays) {
@@ -1497,6 +1658,29 @@ function renderHourlyForecastFromBmkg(data) {
     });
 }
 
+function renderHourlyForecastFromSevenTimer(data) {
+    const container = document.getElementById('hourly-forecast-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let delay = 0;
+    data.dataseries.slice(0, 8).forEach(slot => {
+        const timeStr = getSevenTimerDate(data, slot).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        const temp = Math.round(slot.temp2m);
+
+        const div = document.createElement('div');
+        div.className = 'hourly-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="hourly-time">${timeStr}</div>
+            <div class="hourly-icon" style="width: 48px; height: 48px; margin-bottom: 8px;">${getSevenTimerIconImg(slot.weather)}</div>
+            <div class="hourly-temp">${temp}\u00B0</div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    });
+}
+
 function renderDailyForecastFromWttr(weatherDays) {
     const container = document.getElementById('daily-forecast-container');
     if (!container) return;
@@ -1560,6 +1744,46 @@ function renderDailyForecastFromBmkg(data) {
             <div class="daily-day" style="flex: 1;">${dayName}</div>
             <div class="daily-icon" style="width: 32px; height: 32px;">${getBmkgIconImg(representative)}</div>
             <div class="daily-desc" style="flex: 1.5; padding-left: 10px; font-size: 0.85rem; color: #1e293b; font-weight: 600;">${representative.weather_desc || 'Data BMKG'}</div>
+            <div class="daily-temps" style="flex: 1; text-align: right; justify-content: flex-end;">
+                <span class="temp-min">${min}\u00B0</span>
+                <span class="temp-max">${max}\u00B0</span>
+            </div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    });
+}
+
+function renderDailyForecastFromSevenTimer(data) {
+    const container = document.getElementById('daily-forecast-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const grouped = new Map();
+    data.dataseries.forEach(slot => {
+        const date = getSevenTimerDate(data, slot);
+        const key = date.toISOString().slice(0, 10);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(slot);
+    });
+
+    let delay = 0;
+    Array.from(grouped.entries()).slice(0, 7).forEach(([dateKey, slots], i) => {
+        const date = new Date(`${dateKey}T00:00:00`);
+        const temps = slots.map(slot => Number(slot.temp2m)).filter(Number.isFinite);
+        const min = Math.round(Math.min(...temps));
+        const max = Math.round(Math.max(...temps));
+        const representative = slots[Math.min(3, slots.length - 1)] || slots[0];
+        const dayName = i === 0 ? 'Hari Ini' : (i === 1 ? 'Besok' : days[date.getDay()]);
+
+        const div = document.createElement('div');
+        div.className = 'daily-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="daily-day" style="flex: 1;">${dayName}</div>
+            <div class="daily-icon" style="width: 32px; height: 32px;">${getSevenTimerIconImg(representative.weather)}</div>
+            <div class="daily-desc" style="flex: 1.5; padding-left: 10px; font-size: 0.85rem; color: #1e293b; font-weight: 600;">${getSevenTimerDescription(representative.weather)}</div>
             <div class="daily-temps" style="flex: 1; text-align: right; justify-content: flex-end;">
                 <span class="temp-min">${min}\u00B0</span>
                 <span class="temp-max">${max}\u00B0</span>
@@ -1681,23 +1905,27 @@ function initMonitoringMap() {
     const bounds = L.latLngBounds([[LAMAJANG_LAT, LAMAJANG_LON], [weatherLat, weatherLon]]);
     monitoringMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
 
+    async function updateWeatherPoint(lat, lon, options = {}) {
+        weatherLat = lat;
+        weatherLon = lon;
+        weatherMarker.setLatLng([lat, lon]);
+        if (options.flyTo) monitoringMap.flyTo([lat, lon], 13);
+        setWeatherLoadingState();
+        await updateWeatherLocationFromCoords(lat, lon);
+        weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+        await fetchWeatherData(lat, lon);
+        weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+    }
+
     // Drag pin merah → update cuaca
     weatherMarker.on('dragend', async function() {
         const pos = weatherMarker.getLatLng();
-        weatherLat = pos.lat;
-        weatherLon = pos.lng;
-        await fetchWeatherData(weatherLat, weatherLon);
-        weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`);
-        weatherMarker.openPopup();
+        await updateWeatherPoint(pos.lat, pos.lng);
     });
 
     // Klik peta → pindahkan pin merah
     monitoringMap.on('click', async function(e) {
-        weatherMarker.setLatLng([e.latlng.lat, e.latlng.lng]);
-        weatherLat = e.latlng.lat;
-        weatherLon = e.latlng.lng;
-        await fetchWeatherData(weatherLat, weatherLon);
-        weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+        await updateWeatherPoint(e.latlng.lat, e.latlng.lng);
     });
 
     // Pencarian lokasi
@@ -1717,12 +1945,10 @@ function initMonitoringMap() {
             if (data && data.length > 0) {
                 const newLat = parseFloat(data[0].lat);
                 const newLon = parseFloat(data[0].lon);
-                weatherMarker.setLatLng([newLat, newLon]);
-                weatherLat = newLat;
-                weatherLon = newLon;
-                monitoringMap.flyTo([newLat, newLon], 13);
-                await fetchWeatherData(newLat, newLon);
-                weatherMarker.setPopupContent(`<div style="font-family:'Outfit',sans-serif;text-align:center;font-weight:600;font-size:0.9rem;">${weatherLocationName}</div>`).openPopup();
+                const location = formatNominatimLocation(data[0]);
+                weatherLocationName = location.name;
+                weatherLocationSubtext = location.subtext;
+                await updateWeatherPoint(newLat, newLon, { flyTo: true });
             } else {
                 alert('Lokasi tidak ditemukan. Coba nama kota/kecamatan lain.');
             }
