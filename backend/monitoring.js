@@ -799,6 +799,59 @@ function startOfflineDetector() {
 const WEATHER_LAT = '-6.984213743617759';
 const WEATHER_LON = '107.62672849717276';
 let weatherIntervalTimer = null;
+let useProxyDirectly = false;
+
+async function fetchWithTimeout(url, options = {}, timeout = 2000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    } catch (err) {
+        clearTimeout(id);
+        throw err;
+    }
+}
+
+async function fetchViaProxy(url, options = {}) {
+    // Try AllOrigins raw proxy first
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    try {
+        const response = await fetchWithTimeout(proxyUrl, options, 5000);
+        if (!response.ok) throw new Error('Proxy AllOrigins raw failed');
+        return response;
+    } catch (err) {
+        console.warn(`Proxy AllOrigins raw failed for ${url}:`, err);
+        // Fallback to cors.lol
+        const corsLolUrl = `https://api.cors.lol/?url=${encodeURIComponent(url)}`;
+        const response = await fetchWithTimeout(corsLolUrl, options, 5000);
+        if (!response.ok) throw new Error('Proxy cors.lol failed');
+        return response;
+    }
+}
+
+async function fetchWithFallback(url, options = {}) {
+    let targetUrl = url;
+    if (url.startsWith('//')) {
+        const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+        targetUrl = protocol + url;
+    }
+
+    if (useProxyDirectly) {
+        return fetchViaProxy(targetUrl, options);
+    }
+
+    try {
+        const response = await fetchWithTimeout(targetUrl, options, 2000);
+        if (!response.ok) throw new Error('Direct fetch failed');
+        return response;
+    } catch (err) {
+        console.warn(`Direct fetch failed for ${targetUrl}, using proxy fallback:`, err);
+        useProxyDirectly = true; // Use proxy directly for the rest of this session
+        return fetchViaProxy(targetUrl, options);
+    }
+}
 
 function getWmoDescription(code) {
     if (code === 0) return "Cerah";
@@ -832,10 +885,10 @@ async function fetchWeatherNews() {
 
     // Google News RSS via rss2json — query khusus: banjir, cuaca ekstrem, bandung
     const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=banjir+OR+%22cuaca+ekstrem%22+OR+%22banjir+bandung%22+OR+bmkg&hl=id&gl=ID&ceid=ID:id');
-    const url = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
+    const url = `//api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
 
     try {
-        const response = await fetch(url);
+        const response = await fetchWithFallback(url);
         if (!response.ok) throw new Error('Network error');
         const data = await response.json();
 
@@ -891,7 +944,7 @@ async function fetchWeatherNews() {
             container.innerHTML += card;
         });
 
-    } catch (err) {
+     } catch (err) {
         console.warn('Gagal memuat berita:', err);
         if (badge) badge.textContent = 'Gagal memuat';
         container.innerHTML = `
@@ -903,14 +956,63 @@ async function fetchWeatherNews() {
     }
 }
 
+function getWttrDescription(code) {
+    const c = parseInt(code);
+    if (c === 113) return 'Cerah';
+    if (c === 116) return 'Cerah Berawan';
+    if ([119, 122].includes(c)) return 'Mendung';
+    if ([143, 248, 260].includes(c)) return 'Berkabut';
+    if ([176, 263, 266, 281, 284].includes(c)) return 'Gerimis';
+    if ([293, 296, 353].includes(c)) return 'Hujan Ringan';
+    if ([299, 302, 317, 320].includes(c)) return 'Hujan';
+    if ([305, 308, 356, 359].includes(c)) return 'Hujan Deras';
+    if ([200, 386, 389, 392, 395].includes(c)) return 'Badai Petir';
+    return 'Berawan';
+}
+
+function getWttrIconImg(code) {
+    const c = parseInt(code);
+    let icon = 'day';
+    if (c === 113) icon = 'day';
+    else if (c === 116) icon = 'cloudy-day-1';
+    else if ([119, 122].includes(c)) icon = 'cloudy';
+    else if ([143, 248, 260].includes(c)) icon = 'cloudy';
+    else if ([176, 263, 266, 281, 284, 293, 296, 353].includes(c)) icon = 'rainy-4';
+    else if ([299, 302, 305, 308, 317, 356, 359].includes(c)) icon = 'rainy-6';
+    else if ([200, 386, 389].includes(c)) icon = 'thunder';
+    return `<img src="https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/${icon}.svg" alt="Weather Icon" style="width: 100%; height: 100%; object-fit: contain;">`;
+}
+
 async function fetchWeatherData() {
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&wind_speed_unit=ms&timezone=Asia%2FJakarta`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
+        // Try Vercel Serverless Function first (production proxy for Open-Meteo)
+        let url = `/api/weather?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}`;
+        let response;
+        try {
+            response = await fetchWithTimeout(url, {}, 3000);
+            if (response.status === 404) {
+                throw new Error('Vercel API function not found');
+            }
+        } catch (e) {
+            console.log('Vercel API proxy not available, falling back to local wttr.in bypass...');
+            // Fallback: local wttr.in query bypasses ISP open-meteo blocks
+            url = `//wttr.in/${WEATHER_LAT},${WEATHER_LON}?format=j1`;
+            response = await fetchWithFallback(url, { headers: { 'User-Agent': 'curl/7.68.0' } });
+        }
+
+        if (!response.ok) throw new Error('Fetch failed');
         const data = await response.json();
-        if (data && data.current) {
-            updateWeatherUI(data);
+        
+        if (data.current_condition) {
+            // wttr.in format
+            updateWeatherUIFromWttr(data);
+            if (data.weather) {
+                renderHourlyForecast(data.weather);
+                renderDailyForecast(data.weather);
+            }
+        } else if (data.current) {
+            // Open-Meteo format
+            updateWeatherUIFromMeteo(data);
             if (data.hourly) renderHourlyForecast(data.hourly);
             if (data.daily) renderDailyForecast(data.daily);
         }
@@ -921,7 +1023,33 @@ async function fetchWeatherData() {
     }
 }
 
-function updateWeatherUI(data) {
+function updateWeatherUIFromWttr(data) {
+    const tempEl = document.getElementById('weather-temp');
+    const descEl = document.getElementById('weather-desc');
+    const locEl = document.getElementById('weather-location');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+
+    const cur = data.current_condition[0];
+    if (tempEl) tempEl.textContent = `${cur.temp_C}°C`;
+    if (descEl) descEl.textContent = getWttrDescription(cur.weatherCode);
+    if (locEl) {
+        if (data.nearest_area && data.nearest_area.length > 0) {
+            const area = data.nearest_area[0];
+            const name = area.areaName?.[0]?.value || 'Bojongsoang';
+            locEl.textContent = name;
+        } else {
+            locEl.textContent = 'Bojongsoang';
+        }
+    }
+    if (humEl) humEl.textContent = `${cur.humidity}%`;
+    if (windEl) {
+        const speedMs = (parseFloat(cur.windspeedKmph) / 3.6).toFixed(1);
+        windEl.textContent = `${speedMs} m/s`;
+    }
+}
+
+function updateWeatherUIFromMeteo(data) {
     const tempEl = document.getElementById('weather-temp');
     const descEl = document.getElementById('weather-desc');
     const locEl = document.getElementById('weather-location');
@@ -929,23 +1057,75 @@ function updateWeatherUI(data) {
     const windEl = document.getElementById('weather-wind');
 
     const current = data.current;
-    
     if (tempEl) tempEl.textContent = `${Math.round(current.temperature_2m)}°C`;
-    
-    if (descEl) {
-        descEl.textContent = getWmoDescription(current.weather_code);
-    }
-    
+    if (descEl) descEl.textContent = getWmoDescription(current.weather_code);
     if (locEl) locEl.textContent = 'Bojongsoang';
-    
     if (humEl) humEl.textContent = `${current.relative_humidity_2m}%`;
     if (windEl) windEl.textContent = `${current.wind_speed_10m} m/s`;
 }
 
-function renderHourlyForecast(hourly) {
+function renderHourlyForecast(hourlyOrDays) {
+    if (Array.isArray(hourlyOrDays)) {
+        renderHourlyForecastFromWttr(hourlyOrDays);
+    } else {
+        renderHourlyForecastFromMeteo(hourlyOrDays);
+    }
+}
+
+function renderDailyForecast(dailyOrDays) {
+    if (Array.isArray(dailyOrDays)) {
+        renderDailyForecastFromWttr(dailyOrDays);
+    } else {
+        renderDailyForecastFromMeteo(dailyOrDays);
+    }
+}
+
+function renderHourlyForecastFromWttr(weatherDays) {
     const container = document.getElementById('hourly-forecast-container');
     if (!container) return;
+    container.innerHTML = '';
+    const now = new Date();
+    const currentHour = now.getHours();
     
+    const slots = [];
+    [0, 1].forEach(dayIdx => {
+        if (!weatherDays[dayIdx]) return;
+        const dateStr = weatherDays[dayIdx].date;
+        weatherDays[dayIdx].hourly.forEach(h => {
+            const slotHour = Math.floor(parseInt(h.time) / 100);
+            slots.push({ dateStr, slotHour, h });
+        });
+    });
+
+    const todayStr = now.toISOString().slice(0, 10);
+    const future = slots.filter(s => {
+        if (s.dateStr > todayStr) return true;
+        if (s.dateStr === todayStr && s.slotHour >= currentHour) return true;
+        return false;
+    }).slice(0, 8);
+    
+    let delay = 0;
+    future.forEach(({ slotHour, h }) => {
+        const timeStr = `${String(slotHour).padStart(2, '0')}:00`;
+        const temp = h.tempC || h.temp_C || '--';
+        const code = h.weatherCode;
+        
+        const div = document.createElement('div');
+        div.className = 'hourly-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="hourly-time">${timeStr}</div>
+            <div class="hourly-icon" style="width: 48px; height: 48px; margin-bottom: 8px;">${getWttrIconImg(code)}</div>
+            <div class="hourly-temp">${temp}°</div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    });
+}
+
+function renderHourlyForecastFromMeteo(hourly) {
+    const container = document.getElementById('hourly-forecast-container');
+    if (!container) return;
     container.innerHTML = '';
     const now = new Date();
     
@@ -978,12 +1158,42 @@ function renderHourlyForecast(hourly) {
     }
 }
 
-function renderDailyForecast(daily) {
+function renderDailyForecastFromWttr(weatherDays) {
     const container = document.getElementById('daily-forecast-container');
     if (!container) return;
-    
     container.innerHTML = '';
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     
+    let delay = 0;
+    weatherDays.forEach((day, i) => {
+        const date = new Date(day.date);
+        const isToday = i === 0;
+        const dayName = isToday ? 'Hari Ini' : (i === 1 ? 'Besok' : dayNames[date.getDay()]);
+        const min = day.mintempC;
+        const max = day.maxtempC;
+        const code = day.hourly?.[4]?.weatherCode || day.hourly?.[0]?.weatherCode || 113;
+        
+        const div = document.createElement('div');
+        div.className = 'daily-item fade-in-up';
+        div.style.animationDelay = `${delay}s`;
+        div.innerHTML = `
+            <div class="daily-day" style="flex: 1;">${dayName}</div>
+            <div class="daily-icon" style="width: 32px; height: 32px;">${getWttrIconImg(code)}</div>
+            <div class="daily-desc" style="flex: 1.5; padding-left: 10px; font-size: 0.85rem; color: #1e293b; font-weight: 600;">${getWttrDescription(code)}</div>
+            <div class="daily-temps" style="flex: 1; text-align: right; justify-content: flex-end;">
+                <span class="temp-min">${min}°</span>
+                <span class="temp-max">${max}°</span>
+            </div>
+        `;
+        container.appendChild(div);
+        delay += 0.1;
+    });
+}
+
+function renderDailyForecastFromMeteo(daily) {
+    const container = document.getElementById('daily-forecast-container');
+    if (!container) return;
+    container.innerHTML = '';
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     
     let delay = 0;
@@ -991,7 +1201,6 @@ function renderDailyForecast(daily) {
         const date = new Date(daily.time[i]);
         const isToday = i === 0;
         const dayName = isToday ? 'Hari Ini' : days[date.getDay()];
-        
         const min = Math.round(daily.temperature_2m_min[i]);
         const max = Math.round(daily.temperature_2m_max[i]);
         const code = daily.weather_code[i];
