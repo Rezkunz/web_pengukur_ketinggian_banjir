@@ -570,6 +570,9 @@ function updateUI(waterLevel) {
     // Update titik terakhir pada grafik secara real-time mengikuti nilai sensor terbaru
     updateChartVisuals();
     
+    // Tambah ke buffer real-time SEBELUM hitung prediksi agar laju selalu up-to-date
+    pushRealtimeReading(waterLevel);
+
     // Hitung prediksi banjir berdasarkan trend data
     calculateFloodForecast();
 }
@@ -786,6 +789,65 @@ function setOfflineState(offline, reason, timestamp) {
 // ─────────────────────────────────────────────
 // START: Flood Forecast Logic (Prediksi Banjir)
 // ─────────────────────────────────────────────
+
+// Buffer real-time: simpan pasangan {ts, level} dari 60 detik terakhir
+// Ini memastikan laju dihitung dari data SENSOR LANGSUNG, bukan chart history yang jarang
+const REALTIME_WINDOW_MS = 60 * 1000; // 60 detik
+let realtimeBuffer = []; // [{ts: timestamp, level: cm}, ...]
+
+/**
+ * Tambahkan pembacaan sensor ke buffer real-time dan hitung laju secara langsung.
+ * Dipanggil setiap kali data sensor baru masuk (updateUI).
+ */
+function pushRealtimeReading(level) {
+    const now = Date.now();
+    realtimeBuffer.push({ ts: now, level });
+    // Hapus data yang lebih tua dari REALTIME_WINDOW_MS
+    const cutoff = now - REALTIME_WINDOW_MS;
+    realtimeBuffer = realtimeBuffer.filter(p => p.ts >= cutoff);
+}
+
+/**
+ * Hitung laju kenaikan/penurunan (cm/menit) dari buffer real-time.
+ *
+ * Algoritma yang robust:
+ * 1. Wajib ada window minimal 30 detik agar angka tidak meledak
+ *    (misal: 2cm/2detik = 60 cm/menit padahal cuma noise sensor)
+ * 2. Bagi buffer menjadi dua paruh: hitung rata-rata level dan waktu
+ *    masing-masing paruh → slope = Δlevel_avg / Δtime_avg (cm/menit)
+ * 3. Cap fisik: laju maksimum realistis 5 cm/menit (300 cm/jam)
+ */
+function calcRealtimeRate() {
+    if (realtimeBuffer.length < 4) return 0;
+
+    const first = realtimeBuffer[0];
+    const last  = realtimeBuffer[realtimeBuffer.length - 1];
+    const windowSec = (last.ts - first.ts) / 1000;
+
+    // Butuh minimal 30 detik data agar slope tidak teramplifikasi noise
+    if (windowSec < 30) return 0;
+
+    // Bagi buffer ke dua paruh, ambil rata-rata level & waktu masing-masing
+    const mid  = Math.floor(realtimeBuffer.length / 2);
+    const half1 = realtimeBuffer.slice(0, mid);
+    const half2 = realtimeBuffer.slice(mid);
+
+    const avgLevel1 = half1.reduce((s, p) => s + p.level, 0) / half1.length;
+    const avgLevel2 = half2.reduce((s, p) => s + p.level, 0) / half2.length;
+    const avgTs1    = half1.reduce((s, p) => s + p.ts, 0)    / half1.length;
+    const avgTs2    = half2.reduce((s, p) => s + p.ts, 0)    / half2.length;
+
+    const deltaTimeMin = (avgTs2 - avgTs1) / 60000; // konversi ms → menit
+    if (deltaTimeMin < 1e-6) return 0;
+
+    const rate = (avgLevel2 - avgLevel1) / deltaTimeMin; // cm/menit
+
+    // Batas fisik realistis: ±5 cm/menit (sangat deras pun jarang melebihi ini)
+    const MAX_RATE = 5;
+    const clamped = Math.max(-MAX_RATE, Math.min(MAX_RATE, rate));
+    return Math.round(clamped * 100) / 100;
+}
+
 let floodForecast = {
     rateOfRise: 0,      // cm/menit
     timeToSiaga1: null, // dalam menit
@@ -811,57 +873,45 @@ let floodPatterns = {
  * Menggunakan linear regression untuk trend analisis
  */
 function calculateFloodForecast() {
-    if (!chartHistoryData || chartHistoryData.length < 2) return;
+    // ── Prioritaskan laju real-time dari buffer 60 detik ──
+    const realtimeRate = calcRealtimeRate();
     
-    // Ambil data yang valid (tidak null)
-    const validPoints = chartHistoryData
-        .map((val, idx) => ({ idx, val: Number(val) }))
-        .filter(p => p.val !== null && !isNaN(p.val))
-        .slice(-10); // Ambil 10 poin terakhir untuk akurasi
-    
-    if (validPoints.length < 2) return;
-    
-    // Hitung linear regression: y = mx + b
-    const n = validPoints.length;
-    const sumX = validPoints.reduce((sum, p) => sum + p.idx, 0);
-    const sumY = validPoints.reduce((sum, p) => sum + p.val, 0);
-    const sumXY = validPoints.reduce((sum, p) => sum + p.idx * p.val, 0);
-    const sumXX = validPoints.reduce((sum, p) => sum + p.idx * p.idx, 0);
-    
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const rateOfRise = slope; // cm per data point (setiap menit)
-    
-    floodForecast.rateOfRise = Math.round(rateOfRise * 100) / 100;
-    
-    // Hitung estimasi waktu
-    const currentLevel = currentWaterLevel || 0;
-    floodForecast.timeToSiaga1 = null;
-    floodForecast.timeToSiaga2 = null;
-    
-    if (rateOfRise > 0.05) { // Hanya prediksi jika ada kenaikan signifikan (>0.05 cm/menit)
-        const minutesToSiaga1 = (THRESHOLDS.SIAGA1 - currentLevel) / rateOfRise;
-        const minutesToSiaga2 = (THRESHOLDS.SIAGA2 - currentLevel) / rateOfRise;
-        
-        if (minutesToSiaga1 > 0) {
-            floodForecast.timeToSiaga1 = Math.round(minutesToSiaga1);
+    // Gunakan laju real-time jika buffer cukup (>= 3 titik data)
+    // Fallback ke regresi chart history jika buffer masih kosong/sedikit
+    let rateOfRise;
+    if (realtimeBuffer.length >= 3) {
+        rateOfRise = realtimeRate;
+    } else if (chartHistoryData && chartHistoryData.length >= 2) {
+        const validPoints = chartHistoryData
+            .map((val, idx) => ({ idx, val: Number(val) }))
+            .filter(p => p.val !== null && !isNaN(p.val))
+            .slice(-10);
+        if (validPoints.length >= 2) {
+            const n = validPoints.length;
+            const sumX  = validPoints.reduce((s, p) => s + p.idx, 0);
+            const sumY  = validPoints.reduce((s, p) => s + p.val, 0);
+            const sumXY = validPoints.reduce((s, p) => s + p.idx * p.val, 0);
+            const sumXX = validPoints.reduce((s, p) => s + p.idx * p.idx, 0);
+            const denom = n * sumXX - sumX * sumX;
+            rateOfRise = Math.abs(denom) > 1e-9 ? (n * sumXY - sumX * sumY) / denom : 0;
+        } else {
+            rateOfRise = 0;
         }
-        if (minutesToSiaga2 > 0) {
-            floodForecast.timeToSiaga2 = Math.round(minutesToSiaga2);
-        }
-    } else if (rateOfRise < -0.05) { // Jika air menurun
-        floodForecast.timeToSiaga1 = null;
-        floodForecast.timeToSiaga2 = null;
+    } else {
+        rateOfRise = 0;
     }
-    
+
+    floodForecast.rateOfRise = Math.round(rateOfRise * 100) / 100;
+
     // Tentukan status ramalan
     if (rateOfRise > 1) {
-        floodForecast.status = 'urgent';   // Naiknya cepat >1 cm/menit
+        floodForecast.status = 'urgent';
     } else if (rateOfRise > 0.3) {
-        floodForecast.status = 'moderate'; // Sedang 0.3-1 cm/menit
+        floodForecast.status = 'moderate';
     } else {
-        floodForecast.status = 'normal';   // Normal
+        floodForecast.status = 'normal';
     }
-    
+
     updateFloodForecastUI();
 }
 
@@ -965,32 +1015,67 @@ function updateFloodForecastUI() {
     // Jalankan analisis pola ML terlebih dahulu agar data metrik AI terupdate
     updateFloodPatterns();
     
-    // Tentukan status laju kenaikan dan deskripsinya
+    // Tentukan label, deskripsi, kelas status, warna gradien, dan ikon secara dinamis
+    let panelTitle = 'Laju Air';
     let rateDescription = 'Stabil';
     let rateClass = 'status-aman'; // default safe (green)
     let iconGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
     let shadowColor = 'rgba(16, 185, 129, 0.4)';
+    let rateIcon = `
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+    `; // Ikon stabil (panah kanan horizontal)
     
     if (floodForecast.rateOfRise > 1.0) {
-        rateDescription = 'Kenaikan Kritis';
+        panelTitle = 'Laju Kenaikan';
+        rateDescription = 'Kritis';
         rateClass = 'status-siaga2'; // red
         iconGradient = 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)';
         shadowColor = 'rgba(239, 68, 68, 0.4)';
+        rateIcon = `
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        `; // trending-up
     } else if (floodForecast.rateOfRise > 0.3) {
+        panelTitle = 'Laju Kenaikan';
         rateDescription = 'Kenaikan Sedang';
         rateClass = 'status-siaga1'; // orange
         iconGradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
         shadowColor = 'rgba(245, 158, 11, 0.4)';
+        rateIcon = `
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        `; // trending-up
     } else if (floodForecast.rateOfRise > 0.05) {
+        panelTitle = 'Laju Kenaikan';
         rateDescription = 'Kenaikan Lambat';
         rateClass = 'status-siaga1'; // orange (waspada)
         iconGradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
         shadowColor = 'rgba(245, 158, 11, 0.4)';
+        rateIcon = `
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        `; // trending-up
     } else if (floodForecast.rateOfRise < -0.05) {
+        panelTitle = 'Laju Penurunan';
         rateDescription = 'Air Surut';
         rateClass = 'status-aman'; // green
         iconGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
         shadowColor = 'rgba(16, 185, 129, 0.4)';
+        rateIcon = `
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                <polyline points="17 18 23 18 23 12"></polyline>
+            </svg>
+        `; // trending-down
     }
     
     // Format teks nilai Laju Kenaikan (Tanpa info Siaga lagi!)
@@ -1002,109 +1087,117 @@ function updateFloodForecastUI() {
     // Render isi panel Laju Kenaikan
     ratePanel.innerHTML = `
         <div class="alert-icon" style="background: ${iconGradient}; box-shadow: 0 4px 15px ${shadowColor};">
-            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
+            ${rateIcon}
         </div>
         <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
-            <h3 style="text-transform: none; letter-spacing: normal;">Laju Kenaikan</h3>
+            <h3 style="text-transform: none; letter-spacing: normal;">${panelTitle}</h3>
             <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">${rateValueText}</p>
         </div>
     `;
     
-    // Tentukan prediksi siaga secara dinamis dan tampilkan sebagai banner terpisah
+    // Tentukan prediksi siaga secara dinamis dan tampilkan sebagai panel estimasi waktu
     const currentLevel = currentWaterLevel || 0;
-    let siagaHTML = '';
-    let urgencyClass = 'status-aman';
     
-    if (currentLevel < THRESHOLDS.SIAGA1) {
-        // Belum mencapai Siaga 1: Tampilkan estimasi waktu menuju Siaga 1 jika sedang naik
-        if (floodForecast.timeToSiaga1 !== null && floodForecast.timeToSiaga1 > 0) {
-            const hours = Math.floor(floodForecast.timeToSiaga1 / 60);
-            const mins = floodForecast.timeToSiaga1 % 60;
-            const timeStr = hours > 0 ? `${hours} jam ${mins} menit` : `${mins} menit`;
-            urgencyClass = floodForecast.timeToSiaga1 < 30 ? 'status-siaga2' : 'status-siaga1';
-            const siagaGradient = urgencyClass === 'status-siaga2' 
-                ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' 
-                : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-            const siagaShadow = urgencyClass === 'status-siaga2' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(245, 158, 11, 0.4)';
-            
-            siagaHTML = `
-                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
-                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                </div>
-                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
-                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 1</h3>
-                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">${timeStr} lagi <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Menuju Batas 200cm)</span></p>
-                </div>
-            `;
-        } else {
-            // Aman / Stabil di bawah 200cm
-            const siagaGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            const siagaShadow = 'rgba(16, 185, 129, 0.4)';
-            urgencyClass = 'status-aman';
-            
-            siagaHTML = `
-                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
-                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                </div>
-                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
-                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 1</h3>
-                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">Aman <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Kondisi di bawah batas)</span></p>
-                </div>
-            `;
+    // Helper function untuk format waktu prediksi per threshold (NAIK & SURUT real-time)
+    const getPredictionStatus = (thresholdVal) => {
+        const rate = floodForecast.rateOfRise; // sudah dihitung dari buffer real-time
+        const absRate = Math.abs(rate);
+        const THRESHOLD = 0.02; // minimum laju signifikan (cm/menit)
+
+        if (rate > THRESHOLD) {
+            // ── Air NAIK ──
+            if (currentLevel >= thresholdVal) {
+                // Sudah melampaui batas ini
+                return `<span style="color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Terlampaui ↑</span>`;
+            }
+            // Hitung menit menuju batas
+            const mins = (thresholdVal - currentLevel) / rate;
+            if (mins > 0 && isFinite(mins)) {
+                const h = Math.floor(mins / 60);
+                const m = Math.round(mins % 60);
+                const timeStr = h > 0 ? `${h}j ${m}m` : `${m} menit`;
+                const isUrgent = mins < 30;
+                const color = isUrgent ? '#ef4444' : '#f59e0b';
+                const bg    = isUrgent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+                return `<span style="color: ${color}; font-weight: 700; background: ${bg}; padding: 4px 10px; border-radius: 8px; display: inline-block;">± ${timeStr} lagi ↑</span>`;
+            }
+        } else if (rate < -THRESHOLD) {
+            // ── Air SURUT ──
+            if (currentLevel >= thresholdVal) {
+                // Masih di atas batas tapi sedang turun — berapa menit sampai di bawah batas?
+                const mins = (currentLevel - thresholdVal) / absRate;
+                if (mins > 0 && isFinite(mins)) {
+                    const h = Math.floor(mins / 60);
+                    const m = Math.round(mins % 60);
+                    const timeStr = h > 0 ? `${h}j ${m}m` : `${m} menit`;
+                    return `<span style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">± ${timeStr} lagi ↓</span>`;
+                }
+            } else {
+                return `<span style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Aman (Surut ↓)</span>`;
+            }
         }
-    } else {
-        // Sudah mencapai/melebihi Siaga 1: Ganti dengan estimasi waktu menuju Siaga 2 jika sedang naik
-        if (floodForecast.timeToSiaga2 !== null && floodForecast.timeToSiaga2 > 0) {
-            const hours = Math.floor(floodForecast.timeToSiaga2 / 60);
-            const mins = floodForecast.timeToSiaga2 % 60;
-            const timeStr = hours > 0 ? `${hours} jam ${mins} menit` : `${mins} menit`;
-            urgencyClass = floodForecast.timeToSiaga2 < 30 ? 'status-siaga2' : 'status-siaga1';
-            const siagaGradient = urgencyClass === 'status-siaga2' 
-                ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' 
-                : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-            const siagaShadow = urgencyClass === 'status-siaga2' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(245, 158, 11, 0.4)';
-            
-            siagaHTML = `
-                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
-                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                </div>
-                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
-                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 2</h3>
-                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">${timeStr} lagi <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Menuju Batas 300cm)</span></p>
-                </div>
-            `;
-        } else {
-            // Aman / Stabil untuk Siaga 2
-            const siagaGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            const siagaShadow = 'rgba(16, 185, 129, 0.4)';
-            urgencyClass = 'status-aman';
-            
-            siagaHTML = `
-                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
-                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                </div>
-                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
-                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 2</h3>
-                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">Aman <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Kondisi di bawah batas)</span></p>
-                </div>
-            `;
+
+        // ── Air STABIL ──
+        if (currentLevel >= thresholdVal) {
+            return `<span style="color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Terlampaui</span>`;
         }
+        return `<span style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Aman (Stabil)</span>`;
+    };
+
+    const statusSiaga1 = getPredictionStatus(THRESHOLDS.SIAGA1);
+    const statusSiaga2 = getPredictionStatus(THRESHOLDS.SIAGA2);
+
+    // Tentukan warna ikon dan border panel utama berdasarkan tingkat keparahan umum
+    let urgencyClass = 'status-aman';
+    let siagaGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    let siagaShadow = 'rgba(16, 185, 129, 0.4)';
+
+    if (currentLevel >= THRESHOLDS.SIAGA2) {
+        urgencyClass = 'status-siaga2';
+        siagaGradient = 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)';
+        siagaShadow = 'rgba(239, 68, 68, 0.4)';
+    } else if (currentLevel >= THRESHOLDS.SIAGA1 || floodForecast.rateOfRise > 0.05) {
+        urgencyClass = 'status-siaga1';
+        siagaGradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        siagaShadow = 'rgba(245, 158, 11, 0.4)';
     }
+
+    const siagaHTML = `
+        <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow}; flex-shrink: 0;">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </div>
+        <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">
+            <h3 style="text-transform: none; letter-spacing: normal; margin-bottom: 12px; font-weight: 600; color: var(--text-secondary);">Prediksi Waktu Siaga</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; box-sizing: border-box;">
+                
+                <!-- Card Siaga 1 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.45); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); width: 280px; box-sizing: border-box; flex-shrink: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--text-secondary);">Siaga 1</span>
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Batas ${THRESHOLDS.SIAGA1}cm</span>
+                    </div>
+                    <div style="font-size: 0.95rem; text-align: right;">
+                        ${statusSiaga1}
+                    </div>
+                </div>
+
+                <!-- Card Siaga 2 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.45); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); width: 280px; box-sizing: border-box; flex-shrink: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--text-secondary);">Siaga 2</span>
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Batas ${THRESHOLDS.SIAGA2}cm</span>
+                    </div>
+                    <div style="font-size: 0.95rem; text-align: right;">
+                        ${statusSiaga2}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    `;
     
     // Tampilkan panel prediksi Siaga
     if (siagaPanel) {
