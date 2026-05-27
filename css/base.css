@@ -802,6 +802,7 @@ header        { order: 0; }
         padding: 32px 40px !important;
         padding-bottom: 32px !important;
         overflow-y: auto;
+        overflow-x: hidden !important;
         height: 100vh;
         transition: padding 0.3s ease;
     }
@@ -978,6 +979,7 @@ h1 {
 .content-area {
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 24px 20px;
     padding-bottom: 90px;
     /* Space for bottom nav */

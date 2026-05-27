@@ -479,7 +479,7 @@
    RESPONSIVE - TABLET (768px+)
    ===================================================== */
 @media (min-width: 768px) {
-    .dashboard-top-row { flex-wrap: nowrap; align-items: stretch; }
+    .dashboard-top-row { flex-wrap: wrap; align-items: stretch; }
     .water-container { flex: 1.3; justify-content: center; margin-top: 0; }
     .weather-grid { flex: 1; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); gap: 20px; }
     .water-status-group { gap: 40px; margin: 0 auto; }
@@ -498,6 +498,7 @@
    RESPONSIVE - DESKTOP (1024px+)
    ===================================================== */
 @media (min-width: 1024px) {
+    .dashboard-top-row { flex-wrap: nowrap; }
     .water-container { gap: 48px; }
     .water-tank-glass { width: 120px; height: 280px; border-radius: 60px; }
     #current-level { font-size: 5rem; }
@@ -1577,4 +1578,421 @@ body.dark-mode .leaflet-popup-content-wrapper {
 body.dark-mode .leaflet-popup-tip {
     background: rgba(30, 41, 59, 0.9) !important;
 }
+
+/* =====================================================
+   FLOOD FORECAST PANEL STYLING - IMPROVED UI/UX
+   ===================================================== */
+.forecast-panel {
+    margin-top: 20px !important;
+    margin-bottom: 20px !important;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+}
+
+/* ── Header Section ── */
+.forecast-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.forecast-emoji {
+    font-size: 2.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.forecast-title-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.forecast-title-main h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.forecast-status {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.forecast-status.forecast-normal {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.forecast-status.forecast-moderate {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.forecast-status.forecast-urgent {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    animation: urgentPulse 2s infinite;
+}
+
+@keyframes urgentPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+.forecast-title-group {
+    flex: 1;
+}
+
+.forecast-description {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ── Metrics Grid ── */
+.forecast-metrics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.forecast-emoji-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--brand-primary);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.forecast-emoji-wrap.normal {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.forecast-emoji-wrap.moderate {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.forecast-emoji-wrap.urgent {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.forecast-metric-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 18px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+body.dark-mode .forecast-metric-card {
+    background: rgba(30, 41, 59, 0.45);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.forecast-metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.85);
+}
+
+body.dark-mode .forecast-metric-card:hover {
+    background: rgba(30, 41, 59, 0.65);
+}
+
+/* ── Dynamic Card Status Colors & Icons ── */
+.forecast-metric-card.safe {
+    border-left: 5px solid #10b981;
+}
+.forecast-metric-card.safe .metric-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+.forecast-metric-card.safe .metric-value {
+    color: #10b981;
+}
+
+.forecast-metric-card.warning {
+    border-left: 5px solid #f59e0b;
+}
+.forecast-metric-card.warning .metric-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+.forecast-metric-card.warning .metric-value {
+    color: #d97706;
+}
+
+.forecast-metric-card.danger {
+    border-left: 5px solid #ef4444;
+}
+.forecast-metric-card.danger .metric-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+.forecast-metric-card.danger .metric-value {
+    color: #ef4444;
+}
+
+.forecast-metric-card.danger.critical {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.1);
+    animation: criticalPulseCard 2s infinite ease-in-out;
+}
+.forecast-metric-card.danger.critical .metric-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
+}
+.forecast-metric-card.danger.critical:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.forecast-metric-card.slow,
+.forecast-metric-card.stable {
+    border-left: 5px solid #0ea5e9;
+}
+.forecast-metric-card.slow .metric-icon,
+.forecast-metric-card.stable .metric-icon {
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+}
+.forecast-metric-card.slow .metric-value,
+.forecast-metric-card.stable .metric-value {
+    color: #0ea5e9;
+}
+
+@keyframes criticalPulseCard {
+    0%, 100% { box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15); }
+    50% { box-shadow: 0 8px 28px rgba(239, 68, 68, 0.35); }
+}
+
+/* Laju Kenaikan dynamic subtext colors */
+.metric-subtext.rate-critical { color: #ef4444; }
+.metric-subtext.rate-moderate { color: #f59e0b; }
+.metric-subtext.rate-slow { color: #0ea5e9; }
+.metric-subtext.rate-falling { color: #10b981; }
+.metric-subtext.rate-stable { color: #64748b; }
+
+/* ── Metric Content ── */
+.metric-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.metric-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin="round";
+}
+
+.metric-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    flex: 1;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-secondary);
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.metric-value.critical-time {
+    color: #ef4444;
+}
+
+.metric-unit {
+    display: inline-block;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ── Footer ── */
+.forecast-footer {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footer-note {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* ── Dark Mode ── */
+body.dark-mode .forecast-metric-card {
+    background: rgba(30, 41, 59, 0.45);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .forecast-metric-card:hover {
+    background: rgba(30, 41, 59, 0.65);
+    border-color: rgba(14, 165, 233, 0.4);
+}
+
+body.dark-mode .forecast-status.forecast-urgent {
+    animation: urgentPulseDark 2s infinite;
+}
+
+@keyframes urgentPulseDark {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* ── Responsive Adjustments ── */
+@media (max-width: 768px) {
+    .forecast-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .forecast-emoji {
+        font-size: 2rem;
+    }
+
+    .forecast-title-main h3 {
+        font-size: 1rem;
+    }
+
+    .forecast-metrics-grid {
+        gap: 10px;
+    }
+
+    .forecast-metric-card {
+        padding: 12px 16px;
+        gap: 14px;
+        border-radius: 14px;
+    }
+
+    .metric-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+    }
+
+    .metric-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .metric-value {
+        font-size: 1.15rem;
+    }
+
+    .metric-value.critical-time {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .forecast-emoji {
+        font-size: 1.8rem;
+    }
+
+    .forecast-title-main h3 {
+        font-size: 0.95rem;
+    }
+
+    .forecast-description {
+        font-size: 0.85rem;
+    }
+
+    .metric-label {
+        font-size: 0.7rem;
+    }
+
+    .metric-value {
+        font-size: 1.2rem;
+    }
+
+    .metric-value.critical-time {
+        font-size: 1.3rem;
+    }
+
+    .metric-unit {
+        font-size: 0.75rem;
+    }
+}
+
+/* Spacing Override for Alert/Forecast Banners - Compact Layout (8px Gap) */
+#alert-panel,
+.highlight-panel {
+    margin-bottom: 8px !important;
+}
+#rate-of-rise-panel {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+}
+#siaga-prediction-panel {
+    margin-top: 0 !important;
+    margin-bottom: 20px !important;
+}
+
 

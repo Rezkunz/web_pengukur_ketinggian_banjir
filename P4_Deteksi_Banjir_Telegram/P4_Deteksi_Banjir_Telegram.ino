@@ -69,6 +69,7 @@ unsigned long lastFirebaseWrite = 0;
 const unsigned long firebaseWriteInterval = 1500; // Kirim fluktuasi kecil maksimal tiap 1.5 detik
 unsigned long lastFirebaseLevelWrite = 0;
 const unsigned long firebaseForceWriteInterval = 300000; // Force write level minimal setiap 5 menit (300,000 ms)
+unsigned long lastSuccessfulTxTime = 0; // Catat waktu komunikasi Firebase terakhir yang berhasil
 
 int ukur_satu(); // Deklarasi fungsi ukur
 
@@ -146,6 +147,7 @@ void setup() {
   lcd.print("Level=");
   lcd.setCursor(0,1);
   lcd.print("Status:");
+  lastSuccessfulTxTime = millis(); // Mulai hitung watchdog dari akhir setup
 }
 
 int lastSentLevel = -999;
@@ -190,6 +192,7 @@ void loop() {
           lastFirebaseWrite = millis();
           lastFirebaseLevelWrite = millis();
           lastFirebaseTxTime = millis(); // Catat waktu transmisi WiFi
+          lastSuccessfulTxTime = millis(); // Catat sukses transmisi
         }
       }
     }
@@ -201,6 +204,7 @@ void loop() {
     json.set(".sv", "timestamp");
     if (Firebase.set(fbdo, "/sensor_data/ts", json)) {
       lastFirebaseTxTime = millis(); // Catat waktu kirim heartbeat juga
+      lastSuccessfulTxTime = millis(); // Catat sukses transmisi
     }
     lastHeartbeatUpdate = millis();
   }
@@ -211,6 +215,7 @@ void loop() {
     bool updated = false;
 
     if (Firebase.getJSON(fbdo, "/sensor_data/config")) {
+      lastSuccessfulTxTime = millis(); // Catat sukses komunikasi
       FirebaseJson &json = fbdo.jsonObject();
       FirebaseJsonData data;
       
@@ -291,6 +296,17 @@ void loop() {
       digitalWrite(buzzerPin, LOW);
       buzzerState = false;
     }
+  }
+
+  // 6. Watchdog Auto-Reboot (Restart jika hilang koneksi Firebase selama > 2 menit / 120 detik)
+  if (millis() - lastSuccessfulTxTime >= 120000) {
+    Serial.println("⚠️ Kehilangan koneksi Firebase terlalu lama! Merestart perangkat...");
+    lcd.clear();
+    lcd.print(" Koneksi Hilang ");
+    lcd.setCursor(0,1);
+    lcd.print(" Auto Restart...");
+    delay(1500);
+    ESP.restart();
   }
 }
 

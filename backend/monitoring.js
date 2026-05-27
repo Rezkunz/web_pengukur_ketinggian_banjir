@@ -569,6 +569,9 @@ function updateUI(waterLevel) {
 
     // Update titik terakhir pada grafik secara real-time mengikuti nilai sensor terbaru
     updateChartVisuals();
+    
+    // Hitung prediksi banjir berdasarkan trend data
+    calculateFloodForecast();
 }
 
 // ─────────────────────────────────────────────
@@ -778,6 +781,340 @@ function setOfflineState(offline, reason, timestamp) {
     }
 
     updateOfflineUI(offline, sinceText, reason);
+}
+
+// ─────────────────────────────────────────────
+// START: Flood Forecast Logic (Prediksi Banjir)
+// ─────────────────────────────────────────────
+let floodForecast = {
+    rateOfRise: 0,      // cm/menit
+    timeToSiaga1: null, // dalam menit
+    timeToSiaga2: null, // dalam menit
+    status: 'normal',   // normal, moderate, urgent
+    lastAlertTime: 0    // timestamp untuk cooldown alert
+};
+
+// ML Pattern Recognition untuk analisis musiman
+let floodPatterns = {
+    hourlyAverage: {},      // rata-rata per jam (0-23)
+    dailyPeaks: [],         // peak level setiap hari
+    riseRateHistory: [],    // history laju kenaikan
+    predictions: {          // AI predictions
+        seasonRisk: 'normal',   // normal, medium, high
+        peakTimeToday: null,    // perkiraan jam peak
+        avgRiseRate: 0          // rata-rata rate of rise
+    }
+};
+
+/**
+ * Hitung prediksi banjir berdasarkan data chart history 30 menit terakhir
+ * Menggunakan linear regression untuk trend analisis
+ */
+function calculateFloodForecast() {
+    if (!chartHistoryData || chartHistoryData.length < 2) return;
+    
+    // Ambil data yang valid (tidak null)
+    const validPoints = chartHistoryData
+        .map((val, idx) => ({ idx, val: Number(val) }))
+        .filter(p => p.val !== null && !isNaN(p.val))
+        .slice(-10); // Ambil 10 poin terakhir untuk akurasi
+    
+    if (validPoints.length < 2) return;
+    
+    // Hitung linear regression: y = mx + b
+    const n = validPoints.length;
+    const sumX = validPoints.reduce((sum, p) => sum + p.idx, 0);
+    const sumY = validPoints.reduce((sum, p) => sum + p.val, 0);
+    const sumXY = validPoints.reduce((sum, p) => sum + p.idx * p.val, 0);
+    const sumXX = validPoints.reduce((sum, p) => sum + p.idx * p.idx, 0);
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const rateOfRise = slope; // cm per data point (setiap menit)
+    
+    floodForecast.rateOfRise = Math.round(rateOfRise * 100) / 100;
+    
+    // Hitung estimasi waktu
+    const currentLevel = currentWaterLevel || 0;
+    floodForecast.timeToSiaga1 = null;
+    floodForecast.timeToSiaga2 = null;
+    
+    if (rateOfRise > 0.05) { // Hanya prediksi jika ada kenaikan signifikan (>0.05 cm/menit)
+        const minutesToSiaga1 = (THRESHOLDS.SIAGA1 - currentLevel) / rateOfRise;
+        const minutesToSiaga2 = (THRESHOLDS.SIAGA2 - currentLevel) / rateOfRise;
+        
+        if (minutesToSiaga1 > 0) {
+            floodForecast.timeToSiaga1 = Math.round(minutesToSiaga1);
+        }
+        if (minutesToSiaga2 > 0) {
+            floodForecast.timeToSiaga2 = Math.round(minutesToSiaga2);
+        }
+    } else if (rateOfRise < -0.05) { // Jika air menurun
+        floodForecast.timeToSiaga1 = null;
+        floodForecast.timeToSiaga2 = null;
+    }
+    
+    // Tentukan status ramalan
+    if (rateOfRise > 1) {
+        floodForecast.status = 'urgent';   // Naiknya cepat >1 cm/menit
+    } else if (rateOfRise > 0.3) {
+        floodForecast.status = 'moderate'; // Sedang 0.3-1 cm/menit
+    } else {
+        floodForecast.status = 'normal';   // Normal
+    }
+    
+    updateFloodForecastUI();
+}
+
+/**
+ * Update ML Pattern Recognition untuk prediksi musiman
+ */
+function updateFloodPatterns() {
+    if (!chartHistoryData || chartHistoryData.length === 0) return;
+    
+    // Update rate of rise history
+    floodPatterns.riseRateHistory.push(floodForecast.rateOfRise);
+    if (floodPatterns.riseRateHistory.length > 1440) { // Simpan 24 jam
+        floodPatterns.riseRateHistory.shift();
+    }
+    
+    // Hitung average rate of rise
+    if (floodPatterns.riseRateHistory.length > 0) {
+        const avg = floodPatterns.riseRateHistory.reduce((a, b) => a + b, 0) / floodPatterns.riseRateHistory.length;
+        floodPatterns.predictions.avgRiseRate = Math.round(avg * 100) / 100;
+    }
+    
+    // Tentukan risk level berdasarkan trend
+    if (floodPatterns.predictions.avgRiseRate > 0.8) {
+        floodPatterns.predictions.seasonRisk = 'high';
+    } else if (floodPatterns.predictions.avgRiseRate > 0.3) {
+        floodPatterns.predictions.seasonRisk = 'medium';
+    } else {
+        floodPatterns.predictions.seasonRisk = 'normal';
+    }
+    
+    // Prediksi jam peak berdasarkan waktu (heuristic: biasanya 12-14 siang)
+    const now = new Date();
+    const hour = now.getHours();
+    floodPatterns.predictions.peakTimeToday = (hour < 12) ? '12:00-14:00 siang' : 'sudah lewat';
+}
+
+/**
+ * Alert otomatis saat kondisi darurat
+ */
+function checkAutoAlert() {
+    const now = Date.now();
+    const alertCooldown = 5 * 60 * 1000; // 5 menit cooldown
+    
+    // Alert jika Siaga 2 < 10 menit dan belum alert baru-baru ini
+    if (floodForecast.timeToSiaga2 !== null && 
+        floodForecast.timeToSiaga2 < 10 && 
+        (now - floodForecast.lastAlertTime) > alertCooldown) {
+        
+        triggerFloodAlert('URGENT');
+        floodForecast.lastAlertTime = now;
+    } 
+    // Alert untuk moderate jika Siaga 1 < 15 menit
+    else if (floodForecast.timeToSiaga1 !== null && 
+             floodForecast.timeToSiaga1 < 15 && 
+             floodForecast.timeToSiaga1 >= 10 &&
+             (now - floodForecast.lastAlertTime) > alertCooldown) {
+        
+        triggerFloodAlert('WARNING');
+        floodForecast.lastAlertTime = now;
+    }
+}
+
+/**
+ * Trigger flood alert notification
+ */
+function triggerFloodAlert(severity) {
+    const currentLevel = currentWaterLevel || 0;
+    let message = '';
+    let title = '';
+    
+    if (severity === 'URGENT') {
+        title = '🚨 PERINGATAN DARURAT BANJIR!';
+        message = `Siaga 2 akan tercapai dalam ${floodForecast.timeToSiaga2} menit. Level air: ${currentLevel}cm`;
+    } else if (severity === 'WARNING') {
+        title = '⚠️ Peringatan Banjir';
+        message = `Siaga 1 akan tercapai dalam ${floodForecast.timeToSiaga1} menit. Level air: ${currentLevel}cm`;
+    }
+    
+    // Show browser notification if permission granted
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+            body: message,
+            icon: '/manifest.json',
+            tag: 'flood-alert',
+            requireInteraction: severity === 'URGENT'
+        });
+    }
+    
+    // Log untuk Firebase (optional)
+    console.warn('[AUTO ALERT]', title, message);
+}
+
+/**
+ * Update UI untuk menampilkan prediksi banjir dengan design lebih user-friendly
+ */
+function updateFloodForecastUI() {
+    const ratePanel = document.getElementById('rate-of-rise-panel');
+    const siagaPanel = document.getElementById('siaga-prediction-panel');
+    if (!ratePanel) return;
+    
+    // Jalankan analisis pola ML terlebih dahulu agar data metrik AI terupdate
+    updateFloodPatterns();
+    
+    // Tentukan status laju kenaikan dan deskripsinya
+    let rateDescription = 'Stabil';
+    let rateClass = 'status-aman'; // default safe (green)
+    let iconGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    let shadowColor = 'rgba(16, 185, 129, 0.4)';
+    
+    if (floodForecast.rateOfRise > 1.0) {
+        rateDescription = 'Kenaikan Kritis';
+        rateClass = 'status-siaga2'; // red
+        iconGradient = 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)';
+        shadowColor = 'rgba(239, 68, 68, 0.4)';
+    } else if (floodForecast.rateOfRise > 0.3) {
+        rateDescription = 'Kenaikan Sedang';
+        rateClass = 'status-siaga1'; // orange
+        iconGradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        shadowColor = 'rgba(245, 158, 11, 0.4)';
+    } else if (floodForecast.rateOfRise > 0.05) {
+        rateDescription = 'Kenaikan Lambat';
+        rateClass = 'status-siaga1'; // orange (waspada)
+        iconGradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        shadowColor = 'rgba(245, 158, 11, 0.4)';
+    } else if (floodForecast.rateOfRise < -0.05) {
+        rateDescription = 'Air Surut';
+        rateClass = 'status-aman'; // green
+        iconGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        shadowColor = 'rgba(16, 185, 129, 0.4)';
+    }
+    
+    // Format teks nilai Laju Kenaikan (Tanpa info Siaga lagi!)
+    const rateValueText = `${Math.abs(floodForecast.rateOfRise).toFixed(2)} cm/menit (${rateDescription})`;
+    
+    // Perbarui kelas border panel rate
+    ratePanel.className = `alert-section glass-panel ${rateClass}`;
+    
+    // Render isi panel Laju Kenaikan
+    ratePanel.innerHTML = `
+        <div class="alert-icon" style="background: ${iconGradient}; box-shadow: 0 4px 15px ${shadowColor};">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+        </div>
+        <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
+            <h3 style="text-transform: none; letter-spacing: normal;">Laju Kenaikan</h3>
+            <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">${rateValueText}</p>
+        </div>
+    `;
+    
+    // Tentukan prediksi siaga secara dinamis dan tampilkan sebagai banner terpisah
+    const currentLevel = currentWaterLevel || 0;
+    let siagaHTML = '';
+    let urgencyClass = 'status-aman';
+    
+    if (currentLevel < THRESHOLDS.SIAGA1) {
+        // Belum mencapai Siaga 1: Tampilkan estimasi waktu menuju Siaga 1 jika sedang naik
+        if (floodForecast.timeToSiaga1 !== null && floodForecast.timeToSiaga1 > 0) {
+            const hours = Math.floor(floodForecast.timeToSiaga1 / 60);
+            const mins = floodForecast.timeToSiaga1 % 60;
+            const timeStr = hours > 0 ? `${hours} jam ${mins} menit` : `${mins} menit`;
+            urgencyClass = floodForecast.timeToSiaga1 < 30 ? 'status-siaga2' : 'status-siaga1';
+            const siagaGradient = urgencyClass === 'status-siaga2' 
+                ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' 
+                : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            const siagaShadow = urgencyClass === 'status-siaga2' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+            
+            siagaHTML = `
+                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 1</h3>
+                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">${timeStr} lagi <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Menuju Batas 200cm)</span></p>
+                </div>
+            `;
+        } else {
+            // Aman / Stabil di bawah 200cm
+            const siagaGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            const siagaShadow = 'rgba(16, 185, 129, 0.4)';
+            urgencyClass = 'status-aman';
+            
+            siagaHTML = `
+                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 1</h3>
+                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">Aman <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Kondisi di bawah batas)</span></p>
+                </div>
+            `;
+        }
+    } else {
+        // Sudah mencapai/melebihi Siaga 1: Ganti dengan estimasi waktu menuju Siaga 2 jika sedang naik
+        if (floodForecast.timeToSiaga2 !== null && floodForecast.timeToSiaga2 > 0) {
+            const hours = Math.floor(floodForecast.timeToSiaga2 / 60);
+            const mins = floodForecast.timeToSiaga2 % 60;
+            const timeStr = hours > 0 ? `${hours} jam ${mins} menit` : `${mins} menit`;
+            urgencyClass = floodForecast.timeToSiaga2 < 30 ? 'status-siaga2' : 'status-siaga1';
+            const siagaGradient = urgencyClass === 'status-siaga2' 
+                ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' 
+                : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            const siagaShadow = urgencyClass === 'status-siaga2' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+            
+            siagaHTML = `
+                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </div>
+                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 2</h3>
+                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">${timeStr} lagi <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Menuju Batas 300cm)</span></p>
+                </div>
+            `;
+        } else {
+            // Aman / Stabil untuk Siaga 2
+            const siagaGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            const siagaShadow = 'rgba(16, 185, 129, 0.4)';
+            urgencyClass = 'status-aman';
+            
+            siagaHTML = `
+                <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow};">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <h3 style="text-transform: none; letter-spacing: normal;">Prediksi Siaga 2</h3>
+                    <p style="margin-bottom: 2px; text-transform: none; font-weight: 700; color: var(--text-primary); font-size: 1.25rem;">Aman <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">(Kondisi di bawah batas)</span></p>
+                </div>
+            `;
+        }
+    }
+    
+    // Tampilkan panel prediksi Siaga
+    if (siagaPanel) {
+        siagaPanel.innerHTML = siagaHTML;
+        siagaPanel.className = `alert-section glass-panel ${urgencyClass}`;
+        siagaPanel.style.display = 'flex';
+    }
+    
+    // Trigger auto alerts
+    checkAutoAlert();
 }
 
 /**

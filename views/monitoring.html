@@ -9,7 +9,7 @@
                         </svg>
                     </div>
                     <div class="offline-text">
-                        <strong>⚠️ Sensor Tidak Terdeteksi</strong>
+                        <strong>Sensor Tidak Terdeteksi</strong>
                         <span id="offline-duration-user">Data terakhir diterima lebih dari 5 menit yang lalu</span>
                     </div>
                     <div class="offline-dot"></div>
@@ -130,6 +130,24 @@
                     </div>
                 </section>
 
+
+                <!-- Laju Kenaikan Section -->
+                <section class="alert-section glass-panel status-aman" id="rate-of-rise-panel">
+                    <div class="alert-icon" id="rate-of-rise-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);">
+                        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start;">
+                        <h3 style="text-transform: none; letter-spacing: normal;">Laju Kenaikan</h3>
+                        <p id="rate-of-rise-value" style="margin-bottom: 2px; text-transform: none;">0.00 cm/menit (Stabil)</p>
+                    </div>
+                </section>
+
+                <!-- Prediksi Siaga Section (Dinamis, di bawah Laju Kenaikan pas) -->
+                <section class="alert-section glass-panel" id="siaga-prediction-panel" style="display: flex;">
+                    <!-- Akan di-render secara dinamis lewat JS -->
+                </section>
 
                 <!-- Debit Chart -->
                 <section class="chart-section glass-panel">
