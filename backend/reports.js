@@ -23,9 +23,69 @@ function getGPSLocation() {
     });
 }
 
+// --- UTILITAS KOMPRESI GAMBAR ---
+function compressImage(file, maxWidth = 800) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scaleSize = Math.min(1, maxWidth / img.width);
+                canvas.width = img.width * scaleSize;
+                canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7)); // Kompres ke JPEG 70%
+            };
+            img.onerror = err => reject(err);
+        };
+        reader.onerror = err => reject(err);
+    });
+}
+
+// Event Listener untuk Preview Foto
+document.addEventListener('DOMContentLoaded', () => {
+    const laporFoto = document.getElementById('lapor-foto');
+    if (laporFoto) {
+        laporFoto.addEventListener('change', function() {
+            const preview = document.getElementById('lapor-foto-preview');
+            const textSpan = document.getElementById('lapor-foto-text');
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(this.files[0]);
+                if (textSpan) textSpan.textContent = "✅ Foto Berhasil Diambil";
+            } else {
+                preview.style.display = 'none';
+                if (textSpan) textSpan.textContent = "Ketuk untuk Buka Kamera";
+            }
+        });
+    }
+});
+
 function submitLapor(e) {
     e.preventDefault();
     if(!auth.currentUser) return;
+    
+    // --- RATE LIMITING LOGIC ---
+    const RATE_LIMIT_HOURS = 1;
+    const MAX_REPORTS = 3;
+    const now = Date.now();
+    let userReports = JSON.parse(localStorage.getItem('user_reports_log') || '[]');
+    
+    // Clean up old logs (older than 1 hour)
+    userReports = userReports.filter(time => now - time < RATE_LIMIT_HOURS * 3600000);
+    
+    if (userReports.length >= MAX_REPORTS) {
+        showCustomModal('SIAGA2', 'Terlalu Banyak Laporan', 'Anda telah mencapai batas maksimal (3 laporan per jam). Silakan coba lagi nanti untuk mencegah spam.');
+        return;
+    }
     
     const form = e.target;
     const btnSubmit = form.querySelector('button[type="submit"]');
@@ -33,36 +93,56 @@ function submitLapor(e) {
     
     if (btnSubmit) {
         btnSubmit.disabled = true;
-        btnSubmit.textContent = 'Mengirim...';
+        btnSubmit.textContent = 'Memproses...';
     }
     
     const nama = document.getElementById('lapor-nama').value;
     const lokasi = document.getElementById('lapor-lokasi').value;
     const tingkat = document.getElementById('lapor-tingkat').value;
+    const fotoInput = document.getElementById('lapor-foto');
     
-    if (database) {
-        database.ref('laporan').push({
-            uid: auth.currentUser.uid,
-            nama: nama,
-            lokasi: lokasi,
-            tingkat: tingkat,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        })
-        .then(() => {
-            showSuccessModal('Success', 'Laporan berhasil dikirim, terima kasih!');
-            form.reset();
-        })
-        .catch(err => {
+    const processSubmit = async () => {
+        try {
+            // 1. Ambil & Kompres Foto
+            let base64Foto = null;
+            if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+                base64Foto = await compressImage(fotoInput.files[0]);
+            }
+            
+            if (btnSubmit) btnSubmit.textContent = 'Mengirim...';
+            
+            // 2. Simpan ke Firebase
+            if (database) {
+                await database.ref('laporan').push({
+                    uid: auth.currentUser.uid,
+                    nama: nama,
+                    lokasi: lokasi,
+                    tingkat: tingkat,
+                    foto: base64Foto,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                // 3. Catat waktu untuk rate limiting
+                userReports.push(now);
+                localStorage.setItem('user_reports_log', JSON.stringify(userReports));
+                
+                showSuccessModal('Success', 'Laporan berhasil dikirim, terima kasih!');
+                form.reset();
+                const preview = document.getElementById('lapor-foto-preview');
+                if(preview) { preview.src = ''; preview.style.display = 'none'; }
+            }
+        } catch (err) {
             console.error("Gagal mengirim laporan:", err);
             showCustomModal('SIAGA2', 'Gagal Mengirim', 'Laporan Anda gagal disimpan: ' + err.message);
-        })
-        .finally(() => {
+        } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = originalBtnText;
             }
-        });
-    }
+        }
+    };
+    
+    processSubmit();
 }
 
 function submitSaran(e) {
@@ -142,6 +222,8 @@ function listenAdminData() {
                 const safeTingkat = escapeHTML(data.tingkat || '-');
                 const safeTime = date.toLocaleString('id-ID');
 
+                let fotoElement = data.foto ? `<div style="margin-top: 10px;"><img src="${data.foto}" style="max-width: 100%; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);"></div>` : '';
+
                 adminLapor.innerHTML = `
                 <div class="admin-report-card" style="border-left: 6px solid ${badgeColor};">
                     <div class="admin-report-header">
@@ -156,6 +238,12 @@ function listenAdminData() {
                             <strong>Tingkat:</strong> 
                             <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${safeTingkat}</span>
                         </p>
+                        ${fotoElement}
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button onclick="hapusLaporan('${child.key}')" title="Hapus Laporan" style="background: rgba(239, 68, 68, 0.12); border: none; padding: 8px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
+                                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: #ef4444;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 ` + adminLapor.innerHTML;
@@ -192,6 +280,11 @@ function listenAdminData() {
                         <span class="admin-saran-time">${safeTime}</span>
                     </div>
                     <p class="admin-saran-pesan">"${safePesan}"</p>
+                    <div style="margin-top: 10px; text-align: right;">
+                        <button onclick="hapusSaran('${child.key}')" title="Hapus Saran" style="background: rgba(239, 68, 68, 0.12); border: none; padding: 8px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
+                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: #ef4444;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
                 </div>
                 ` + adminSaran.innerHTML;
             }
@@ -201,3 +294,34 @@ function listenAdminData() {
         if(count === 0 && adminSaran) adminSaran.innerHTML = '<div class="admin-empty-state">Belum ada saran atau feedback.</div>';
     });
 }
+
+// Fungsi Hapus untuk Admin
+window.hapusLaporan = function(key) {
+    if (confirm('Yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.')) {
+        if (database) {
+            database.ref('laporan/' + key).remove()
+            .then(() => {
+                showSuccessModal('Sukses', 'Laporan berhasil dihapus dari sistem.');
+            })
+            .catch(err => {
+                console.error('Gagal hapus laporan:', err);
+                showCustomModal('SIAGA2', 'Gagal Menghapus', err.message);
+            });
+        }
+    }
+};
+
+window.hapusSaran = function(key) {
+    if (confirm('Yakin ingin menghapus feedback/saran ini?')) {
+        if (database) {
+            database.ref('saran/' + key).remove()
+            .then(() => {
+                showSuccessModal('Sukses', 'Saran berhasil dihapus dari sistem.');
+            })
+            .catch(err => {
+                console.error('Gagal hapus saran:', err);
+                showCustomModal('SIAGA2', 'Gagal Menghapus', err.message);
+            });
+        }
+    }
+};
