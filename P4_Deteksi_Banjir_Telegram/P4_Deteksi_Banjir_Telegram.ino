@@ -46,7 +46,7 @@ unsigned long lastBuzzerToggle = 0;
 bool buzzerState = false; 
 String lastBuzzerStatus = "Aman";
 unsigned long statusChangeTime = 0;
-const unsigned long buzzerTimeout = 120000; // 2 menit timeout untuk auto-silence alarm
+const unsigned long buzzerTimeout = 30000; // [FIX] 30 detik timeout (bukan 2 menit)
  
 
 void baca_level(int median_d);
@@ -58,11 +58,13 @@ unsigned long lastHeartbeatUpdate = 0;
 const unsigned long heartbeatInterval = 3000;  // Kirim detak jantung setiap 3 detik jika air tenang
 unsigned long lastFirebaseTxTime = 0;          // Catat waktu kirim WiFi terakhir untuk cooldown tegangan
 unsigned long lastOtaCheck = 0;
-const unsigned long otaInterval = 2000;       // Cek OTA setiap 2 detik (sangat responsif & real-time)
+const unsigned long otaInterval = 10000;       // [FIX] Cek OTA setiap 10 detik (bukan 2 detik) agar sensor tidak terputus
 
 // Buffer untuk Moving Median
 int samples[3] = {0, 0, 0};
 int sampleIdx = 0;
+
+// Variabel dihapus karena laju air kini 100% dihitung di Web Dashboard
 
 // Throttling Firebase (Mencegah spam write fluktuasi kecil)
 unsigned long lastFirebaseWrite = 0;
@@ -70,6 +72,7 @@ const unsigned long firebaseWriteInterval = 1500; // Kirim fluktuasi kecil maksi
 unsigned long lastFirebaseLevelWrite = 0;
 const unsigned long firebaseForceWriteInterval = 300000; // Force write level minimal setiap 5 menit (300,000 ms)
 unsigned long lastSuccessfulTxTime = 0; // Catat waktu komunikasi Firebase terakhir yang berhasil
+
 
 int ukur_satu(); // Deklarasi fungsi ukur
 
@@ -84,9 +87,6 @@ void setup() {
   lcd.backlight();
   lcd.clear();
   lcd.print("  Sistem Aktif  ");
-  lcd.setCursor(0,1);
-  lcd.print("  Cek WiFi...   ");
-
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
   
@@ -99,14 +99,9 @@ void setup() {
   lcd.print("Koneksi Sukses!");
   delay(1000);
 
-
-  
   // Inisialisasi Firebase SECURE (Email/Password)
   lcd.clear();
   lcd.print("Auth Firebase...");
-  
-  // WAJIB panggil ini SEBELUM Firebase.begin() untuk mencegah Crash/Mentok karena kehabisan RAM!
-  fbdo.setBSSLBufferSize(1024, 1024);
   
   config_fb.database_url = FIREBASE_HOST;
   config_fb.api_key = FIREBASE_API_KEY;
@@ -159,8 +154,16 @@ void loop() {
   // 1. Baca 1 sampel sensor setiap 80ms, HANYA jika tegangan sudah stabil (minimal 50ms setelah transmisi WiFi terakhir)
   if (millis() - lastSensorRead >= sensorInterval && millis() - lastFirebaseTxTime >= 50) {
     lastSensorRead = millis();
+    
+    // [FIX] Matikan buzzer sementara saat baca sensor agar tidak ada noise elektrik
+    // yang mengganggu sinyal pulseIn() HC-SR04
+    bool buzzerWasOn = buzzerState;
+    if (buzzerWasOn) digitalWrite(buzzerPin, LOW);
+    
     int new_sample = ukur_satu();
     
+    // [FIX] Nyalakan kembali buzzer setelah sensor selesai dibaca
+    if (buzzerWasOn) digitalWrite(buzzerPin, HIGH);
     // Validasi jangkauan sensor HC-SR04 (2cm s.d 400cm)
     if (new_sample >= 2 && new_sample <= 400) {
       samples[sampleIdx] = new_sample;
@@ -209,7 +212,9 @@ void loop() {
     lastHeartbeatUpdate = millis();
   }
 
-  // 4. Update konfigurasi OTA secara berkala (setiap 15 detik) menggunakan single request JSON
+  // (Fitur Laju Air telah dipindah ke Web Dashboard untuk meringankan beban ESP8266)
+
+  // 5. Update konfigurasi OTA secara berkala (setiap 15 detik) menggunakan single request JSON
   if (millis() - lastOtaCheck >= otaInterval) {
     lastOtaCheck = millis();
     bool updated = false;
@@ -264,10 +269,13 @@ void loop() {
   else {
     // Mode 1: Otomatis (Mengikuti Ketinggian Air)
     
-    // Deteksi jika status alarm berubah (misal Aman -> Siaga 1, atau Siaga 1 -> Siaga 2)
+    // [FIX] Reset timer saat status kembali Aman agar buzzer bisa bunyi lagi di bahaya berikutnya
     if (status != lastBuzzerStatus) {
       lastBuzzerStatus = status;
-      statusChangeTime = millis(); // Reset waktu awal bunyi
+      // Reset timer hanya saat masuk kondisi bahaya (bukan saat kembali Aman)
+      if (status == "Siaga 1" || status == "Siaga 2") {
+        statusChangeTime = millis();
+      }
     }
 
     // Cek apakah bunyi alarm sudah melebihi batas waktu (timeout)

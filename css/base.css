@@ -68,7 +68,7 @@ body.dark-mode .glass-panel {
 body.dark-mode .bottom-nav {
     background: rgba(11, 17, 32, 0.95) !important;
     border-top-color: rgba(255, 255, 255, 0.07) !important;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
 body.dark-mode .nav-item {
@@ -76,11 +76,24 @@ body.dark-mode .nav-item {
 }
 
 body.dark-mode .nav-item.active {
-    color: var(--brand-primary) !important;
+    color: #38bdf8 !important; /* Biru neon terang */
+}
+
+body.dark-mode .nav-item.active span {
+    text-shadow: 0 0 10px rgba(56, 189, 248, 0.7) !important; /* Teks bercahaya */
 }
 
 body.dark-mode .nav-item.active::before {
-    background: rgba(14, 165, 233, 0.15) !important;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.8) 0%, rgba(2, 132, 199, 0.95) 100%) !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.5) inset, 0 4px 15px rgba(14, 165, 233, 0.5) !important;
+    border: 1px solid rgba(56, 189, 248, 0.5) !important;
+    border-radius: 50% !important; /* Lingkaran melayang sempurna */
+}
+
+body.dark-mode .nav-item.active svg {
+    color: white !important;
+    fill: white !important;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)) !important; /* Ikon putih menyala di dalam lingkaran biru */
 }
 
 /* ── DARK MODE: Sidebar (Desktop) ── */
@@ -794,6 +807,11 @@ header        { order: 0; }
 
     .nav-item.active svg {
         transform: none !important;
+        filter: none !important;
+    }
+    
+    .nav-item::before {
+        display: none !important; /* Matikan animasi pill dari mobile */
     }
 
     /* ── CONTENT AREA ── */

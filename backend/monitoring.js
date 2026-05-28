@@ -77,38 +77,103 @@ function initRealtimeChart(isAdmin) {
             datasets: [{
                 label: 'Tinggi Air (cm)',
                 data: new Array(CHART_MAX_POINTS).fill(null),
-                borderColor: '#0ea5e9',
-                backgroundColor: 'rgba(14, 165, 233, 0.15)',
-                tension: 0.4,
-                fill: true,
-                borderWidth: 2.5,
-                pointBackgroundColor: '#0369a1',
-                pointBorderColor: '#fff',
+                borderColor: '#0ea5e9', // Biru terang utama
+                backgroundColor: (context) => {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return null;
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0, 'rgba(14, 165, 233, 0.5)'); // Tebal di atas
+                    gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)'); // Menghilang di bawah
+                    return gradient;
+                },
+                tension: 0.4,         // Lengkungan halus yang elegan
+                fill: true,           // Mengisi area di bawah garis
+                borderWidth: 3,       // Garis sedikit lebih tebal dan tegas
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#0ea5e9',
                 pointBorderWidth: 2,
-                pointRadius: 5,
-                spanGaps: false
+                pointRadius: 0,       // Sembunyikan titik saat diam agar grafik super mulus
+                pointHoverRadius: 6,  // Titik baru muncul saat di-hover
+                spanGaps: true        // Hubungkan titik yang terputus dengan garis lurus
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,     // Tooltip muncul tanpa harus tepat mengenai titik
+            },
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} cm` } }
+                tooltip: { 
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#38bdf8',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: { label: ctx => `Ketinggian: ${ctx.parsed.y} cm` } 
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     max: 400,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { color: '#475569', callback: v => v + 'cm', font: { size: 11 }, stepSize: 100 }
+                    grid: { 
+                        color: 'rgba(148, 163, 184, 0.15)', // Grid abu-abu super tipis
+                        borderDash: [5, 5],                 // Garis putus-putus elegan
+                        drawBorder: false                   // Hilangkan garis pinggir kasar
+                    },
+                    ticks: { 
+                        color: '#64748b', 
+                        font: { size: 11, weight: '500' }, 
+                        callback: v => v + ' cm',
+                        padding: 10
+                    }
                 },
                 x: {
-                    grid: { display: false },
-                    ticks: { color: '#475569', font: { size: 11 } }
+                    grid: { display: false, drawBorder: false }, // X-axis bersih tanpa grid
+                    ticks: { 
+                        color: '#64748b', 
+                        font: { size: 10, weight: '500' },
+                        maxTicksLimit: 6,                    // Jangan terlalu rapat
+                        maxRotation: 0,
+                        padding: 10
+                    }
                 }
             }
-        }
+        },
+        plugins: [{
+            id: 'siagaLines',
+            beforeDraw(chart) {
+                const { ctx, chartArea, scales: { y } } = chart;
+                if (!chartArea) return;
+                
+                const drawLine = (yValue, color, label) => {
+                    if (yValue > y.max || yValue < y.min) return;
+                    const yPos = y.getPixelForValue(yValue);
+                    
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(chartArea.left, yPos);
+                    ctx.lineTo(chartArea.right, yPos);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = color;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    
+                    // Teks Label
+                    ctx.fillStyle = color;
+                    ctx.font = '10px Inter, sans-serif';
+                    ctx.fillText(label, chartArea.left + 5, yPos - 5);
+                    ctx.restore();
+                };
+                
+                drawLine(THRESHOLDS.SIAGA1, 'rgba(234, 179, 8, 0.9)', 'Siaga 1 (Waspada)');
+                drawLine(THRESHOLDS.SIAGA2, 'rgba(239, 68, 68, 0.9)', 'Siaga 2 (Bahaya)');
+            }
+        }]
     });
 }
 
@@ -165,27 +230,145 @@ function initHistoryChart(isAdmin = false) {
 
     const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
     const ctx = canvasEl.getContext('2d');
-    
-    // Custom Plugin to draw horizontal threshold lines
+
+    // ── Plugin 1: Garis threshold dengan LABEL langsung di garis ──
     const thresholdLines = {
         id: 'thresholdLines',
-        beforeDraw(chart) {
+        afterDraw(chart) {
             const { ctx, chartArea: { left, right }, scales: { y } } = chart;
             ctx.save();
-            ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(left, y.getPixelForValue(THRESHOLDS.SIAGA1));
-            ctx.lineTo(right, y.getPixelForValue(THRESHOLDS.SIAGA1));
-            ctx.stroke();
 
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
-            ctx.setLineDash([]);
-            ctx.beginPath();
-            ctx.moveTo(left, y.getPixelForValue(THRESHOLDS.SIAGA2));
-            ctx.lineTo(right, y.getPixelForValue(THRESHOLDS.SIAGA2));
-            ctx.stroke();
+            const drawLine = (value, color, dash, label) => {
+                const yPos = y.getPixelForValue(value);
+                if (yPos < chart.chartArea.top || yPos > chart.chartArea.bottom) return;
+
+                // Label pill config
+                const padding = 6;
+                const labelText = `${label} (${value}cm)`;
+                ctx.font = 'bold 10px Outfit, sans-serif';
+                const textWidth = ctx.measureText(labelText).width;
+                const boxW = textWidth + padding * 2;
+                const boxH = 18;
+                const boxX = right - boxW - 4;
+                const boxY = yPos - boxH / 2;
+
+                // Garis (Berhenti sebelum label agar teks tidak dicoret)
+                const lineEnd = boxX - 6;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.8;
+                ctx.setLineDash(dash);
+                ctx.beginPath();
+                ctx.moveTo(left, yPos);
+                ctx.lineTo(lineEnd, yPos);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Background pill (Semi-transparan, beradaptasi dengan Light/Dark mode)
+
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.15;
+                ctx.beginPath();
+                ctx.roundRect(boxX, boxY, boxW, boxH, 4);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // Border pill
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(boxX, boxY, boxW, boxH, 4);
+                ctx.stroke();
+
+                // Teks
+                ctx.fillStyle = color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, boxX + boxW / 2, yPos);
+            };
+
+            drawLine(THRESHOLDS.SIAGA1, 'rgba(245, 158, 11, 0.9)', [5, 4], 'Siaga 1');
+            drawLine(THRESHOLDS.SIAGA2, 'rgba(239, 68, 68, 0.9)',  [],     'Siaga 2');
+            ctx.restore();
+        }
+    };
+
+    // ── Plugin 2: Label nilai di atas SEMUA bar yang memiliki data ──
+    const valueLabels = {
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx, data, scales: { y } } = chart;
+            const dataset = data.datasets[0];
+
+            dataset.data.forEach((value, index) => {
+                if (value === null || value === 0) return;
+                const meta = chart.getDatasetMeta(0);
+                const bar = meta.data[index];
+                if (!bar) return;
+
+                const x = bar.x;
+                const yTop = y.getPixelForValue(value) - 6;
+
+                ctx.save();
+                ctx.font = 'bold 10px Outfit, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+
+                // Shadow agar terbaca di atas bar
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 4;
+
+                const label = `${value}cm`;
+                const color = value >= THRESHOLDS.SIAGA2 ? '#dc2626'
+                            : value >= THRESHOLDS.SIAGA1 ? '#d97706'
+                            : '#0284c7'; // Biru (Normal)
+                ctx.fillStyle = color;
+                ctx.fillText(label, x, yTop);
+                ctx.restore();
+            });
+        }
+    };
+
+    // ── Plugin 3: Legenda warna bar di bawah chart (Responsive) ──
+    const colorLegend = {
+        id: 'colorLegend',
+        afterDraw(chart) {
+            const { ctx, chartArea, width } = chart;
+            const legendItems = [
+                { color: 'rgba(239, 68, 68, 0.85)',  label: 'Siaga 2' },
+                { color: 'rgba(245, 158, 11, 0.85)', label: 'Siaga 1' },
+                { color: 'rgba(14, 165, 233, 0.75)', label: 'Aman' },
+                { color: 'rgba(203, 213, 225, 0.6)', label: 'No Data' },
+            ];
+
+            ctx.save();
+            ctx.font = '10px Outfit, sans-serif';
+            ctx.textBaseline = 'middle';
+
+            const boxSize = 10;
+            const isMobile = width < 450;
+            const columns = isMobile ? 2 : 4;
+            const itemSpacing = isMobile ? Math.min((chartArea.right - chartArea.left) / 2, 100) : 90;
+            const rowSpacing = 16;
+            
+            const startY = chart.height - (isMobile ? 32 : 20);
+
+            legendItems.forEach((item, index) => {
+                const col = index % columns;
+                const row = Math.floor(index / columns);
+                
+                // Hitung posisi x dan y
+                const totalWidthForThisRow = columns * itemSpacing;
+                const startX = chartArea.left + (chartArea.right - chartArea.left - totalWidthForThisRow) / 2 + (col * itemSpacing) + 10;
+                const currentY = startY + (row * rowSpacing);
+
+                ctx.fillStyle = item.color;
+                ctx.beginPath();
+                ctx.roundRect(startX, currentY - boxSize / 2, boxSize, boxSize, 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#475569';
+                ctx.fillText(item.label, startX + boxSize + 5, currentY);
+            });
             ctx.restore();
         }
     };
@@ -193,36 +376,64 @@ function initHistoryChart(isAdmin = false) {
     historyChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: 'Tinggi Air (cm)',
-                data: new Array(24).fill(0),
+                data: new Array(24).fill(null),
                 backgroundColor: [],
-                borderRadius: 5,
-                borderWidth: 0
+                borderRadius: 6,
+                borderWidth: 0,
+                barPercentage: 0.65,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            layout: { padding: { bottom: 55 } }, // Ruang ekstra untuk legenda di mobile
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} cm` } }
+                tooltip: {
+                    callbacks: {
+                        title: items => `Jam ${items[0].label}`,
+                        label: item => {
+                            const v = item.parsed.y;
+                            if (v === null || v === 0) return 'Tidak ada data';
+                            const status = v >= THRESHOLDS.SIAGA2 ? '🔴 Siaga 2 (Bahaya)'
+                                         : v >= THRESHOLDS.SIAGA1 ? '🟡 Siaga 1 (Waspada)'
+                                         : '🟢 Normal (Aman)';
+                            return [`Tinggi air: ${v} cm`, status];
+                        }
+                    },
+                    padding: 10,
+                    boxPadding: 4
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 400,
+                    max: THRESHOLDS.MAX_TANK,
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { color: '#475569', callback: v => v + 'cm', font: { size: 11 }, stepSize: 100 }
+                    ticks: {
+                        color: '#475569',
+                        callback: v => v + 'cm',
+                        font: { size: 11 },
+                        stepSize: Math.ceil(THRESHOLDS.MAX_TANK / 4)
+                    }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#475569', font: { size: 10 }, autoSkip: false }
+                    ticks: { 
+                        color: '#475569', 
+                        font: { size: 10 }, 
+                        autoSkip: true, // Auto skip label jam jika terlalu padat
+                        maxRotation: 0, // Jangan diputar miring agar hemat ruang vertikal
+                        maxTicksLimit: 12 // Maksimal 12 label jam yang tampil
+                    }
                 }
             }
         },
-        plugins: [thresholdLines]
+        plugins: [thresholdLines, valueLabels, colorLegend]
     });
 
     const datePickerId = isAdmin ? 'admin-history-date' : 'history-date-picker';
@@ -238,6 +449,7 @@ function initHistoryChart(isAdmin = false) {
     }
 }
 
+
 function handleDatePickerChange(e) {
     fetchHistoryData(e.target.value);
 }
@@ -245,7 +457,6 @@ function handleDatePickerChange(e) {
 async function fetchHistoryData(dateStr) {
     if (!database) return;
     
-    // Detach old listener if exists
     if (currentHistoryRef) {
         currentHistoryRef.off();
         currentHistoryRef = null;
@@ -254,13 +465,18 @@ async function fetchHistoryData(dateStr) {
     currentHistoryRef = database.ref(`history/${dateStr}`);
     currentHistoryRef.on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        const hourlyValues = Array.from({ length: 24 }, (_, i) => data[i] || 0);
+
+        // null = tidak ada data (bukan 0) agar bar tidak muncul untuk jam kosong
+        const hourlyValues = Array.from({ length: 24 }, (_, i) =>
+            data[i] !== undefined ? data[i] : null
+        );
         
-        // Dynamic colors based on value
         const colors = hourlyValues.map(v => {
-            if (v >= THRESHOLDS.SIAGA2) return 'rgba(239, 68, 68, 0.8)'; // Merah
-            if (v >= THRESHOLDS.SIAGA1) return 'rgba(245, 158, 11, 0.8)'; // Kuning
-            return 'rgba(14, 165, 233, 0.6)'; // Biru (Normal)
+            if (v === null)                    return 'rgba(203, 213, 225, 0.5)'; // Abu — tidak ada data
+            if (v >= THRESHOLDS.SIAGA2)        return 'rgba(239, 68, 68, 0.85)';  // Merah — Siaga 2
+            if (v >= THRESHOLDS.SIAGA1)        return 'rgba(245, 158, 11, 0.85)'; // Oranye — Siaga 1
+            if (v > 0)                         return 'rgba(14, 165, 233, 0.75)';  // Biru — Normal
+            return 'rgba(203, 213, 225, 0.5)';                                      // Abu — nilai 0
         });
         
         if (historyChart) {
@@ -272,6 +488,7 @@ async function fetchHistoryData(dateStr) {
         console.warn('Gagal mendengarkan data history:', err);
     });
 }
+
 
 function saveHourlyData(value) {
     if (!database || value === null || value === undefined) return;
@@ -332,6 +549,11 @@ function startChartHistoryListener() {
             chartHistoryData = entries;
             chartHistoryLabels = labels;
             updateChartVisuals();
+            
+            // Recalculate rate of rise because historical time window has shifted
+            if (typeof currentWaterLevel !== 'undefined') {
+                calculateFloodForecast();
+            }
         });
 }
 
@@ -395,7 +617,7 @@ function startChartAutoSaveTimer() {
     if (chartIntervalTimer) clearInterval(chartIntervalTimer);
     chartIntervalTimer = setInterval(() => {
         if (currentWaterLevel !== null && currentWaterLevel !== undefined && !isSensorOffline) {
-            saveChartPoint(currentWaterLevel);
+            maybeSaveChartPoint(currentWaterLevel);
         }
     }, CHART_INTERVAL_MS);
 }
@@ -569,11 +791,8 @@ function updateUI(waterLevel) {
 
     // Update titik terakhir pada grafik secara real-time mengikuti nilai sensor terbaru
     updateChartVisuals();
-    
-    // Tambah ke buffer real-time SEBELUM hitung prediksi agar laju selalu up-to-date
-    pushRealtimeReading(waterLevel);
 
-    // Hitung prediksi banjir berdasarkan trend data
+    // Hitung laju kenaikan air menggunakan riwayat Firebase (chart_history)
     calculateFloodForecast();
 }
 
@@ -790,62 +1009,48 @@ function setOfflineState(offline, reason, timestamp) {
 // START: Flood Forecast Logic (Prediksi Banjir)
 // ─────────────────────────────────────────────
 
-// Buffer real-time: simpan pasangan {ts, level} dari 60 detik terakhir
-// Ini memastikan laju dihitung dari data SENSOR LANGSUNG, bukan chart history yang jarang
-const REALTIME_WINDOW_MS = 60 * 1000; // 60 detik
-let realtimeBuffer = []; // [{ts: timestamp, level: cm}, ...]
-
 /**
- * Tambahkan pembacaan sensor ke buffer real-time dan hitung laju secara langsung.
- * Dipanggil setiap kali data sensor baru masuk (updateUI).
+ * Update flood forecast state dan UI.
+ * Dipanggil secara real-time setiap kali sensor mengirim update (updateUI).
  */
-function pushRealtimeReading(level) {
-    const now = Date.now();
-    realtimeBuffer.push({ ts: now, level });
-    // Hapus data yang lebih tua dari REALTIME_WINDOW_MS
-    const cutoff = now - REALTIME_WINDOW_MS;
-    realtimeBuffer = realtimeBuffer.filter(p => p.ts >= cutoff);
-}
+function calculateFloodForecast() {
+    let rateOfRise = 0;
+    
+    // Gunakan data historis (chart_history) dari Firebase yang sudah ditarik saat web dimuat
+    if (chartHistoryData && chartHistoryData.length > 0) {
+        let pastIndex = -1;
+        
+        // Cari data historis hingga 5 menit ke belakang untuk mencari pembanding
+        for (let i = 1; i <= 5; i++) {
+            const idx = chartHistoryData.length - 1 - i;
+            if (idx >= 0 && chartHistoryData[idx] !== null) {
+                pastIndex = idx;
+            }
+        }
+        
+        if (pastIndex !== -1) {
+            const pastLevel = chartHistoryData[pastIndex];
+            // Asumsi 1 index = 1 menit (sesuai chart interval)
+            const minutesDiff = (chartHistoryData.length - 1) - pastIndex; 
+            
+            // Laju = (Tinggi Saat Ini - Tinggi Historis) / Selisih Menit
+            let slope = (currentWaterLevel - pastLevel) / minutesDiff;
+            rateOfRise = Math.max(-20, Math.min(20, slope));
+        }
+    }
 
-/**
- * Hitung laju kenaikan/penurunan (cm/menit) dari buffer real-time.
- *
- * Algoritma yang robust:
- * 1. Wajib ada window minimal 30 detik agar angka tidak meledak
- *    (misal: 2cm/2detik = 60 cm/menit padahal cuma noise sensor)
- * 2. Bagi buffer menjadi dua paruh: hitung rata-rata level dan waktu
- *    masing-masing paruh → slope = Δlevel_avg / Δtime_avg (cm/menit)
- * 3. Cap fisik: laju maksimum realistis 5 cm/menit (300 cm/jam)
- */
-function calcRealtimeRate() {
-    if (realtimeBuffer.length < 4) return 0;
+    floodForecast.rateOfRise = Math.round(rateOfRise * 100) / 100;
 
-    const first = realtimeBuffer[0];
-    const last  = realtimeBuffer[realtimeBuffer.length - 1];
-    const windowSec = (last.ts - first.ts) / 1000;
+    // Tentukan status ramalan berdasarkan laju
+    if (floodForecast.rateOfRise > 1.0) {
+        floodForecast.status = 'urgent';
+    } else if (floodForecast.rateOfRise > 0.3) {
+        floodForecast.status = 'moderate';
+    } else {
+        floodForecast.status = 'normal';
+    }
 
-    // Butuh minimal 30 detik data agar slope tidak teramplifikasi noise
-    if (windowSec < 30) return 0;
-
-    // Bagi buffer ke dua paruh, ambil rata-rata level & waktu masing-masing
-    const mid  = Math.floor(realtimeBuffer.length / 2);
-    const half1 = realtimeBuffer.slice(0, mid);
-    const half2 = realtimeBuffer.slice(mid);
-
-    const avgLevel1 = half1.reduce((s, p) => s + p.level, 0) / half1.length;
-    const avgLevel2 = half2.reduce((s, p) => s + p.level, 0) / half2.length;
-    const avgTs1    = half1.reduce((s, p) => s + p.ts, 0)    / half1.length;
-    const avgTs2    = half2.reduce((s, p) => s + p.ts, 0)    / half2.length;
-
-    const deltaTimeMin = (avgTs2 - avgTs1) / 60000; // konversi ms → menit
-    if (deltaTimeMin < 1e-6) return 0;
-
-    const rate = (avgLevel2 - avgLevel1) / deltaTimeMin; // cm/menit
-
-    // Batas fisik realistis: ±5 cm/menit (sangat deras pun jarang melebihi ini)
-    const MAX_RATE = 5;
-    const clamped = Math.max(-MAX_RATE, Math.min(MAX_RATE, rate));
-    return Math.round(clamped * 100) / 100;
+    updateFloodForecastUI();
 }
 
 let floodForecast = {
@@ -867,53 +1072,6 @@ let floodPatterns = {
         avgRiseRate: 0          // rata-rata rate of rise
     }
 };
-
-/**
- * Hitung prediksi banjir berdasarkan data chart history 30 menit terakhir
- * Menggunakan linear regression untuk trend analisis
- */
-function calculateFloodForecast() {
-    // ── Prioritaskan laju real-time dari buffer 60 detik ──
-    const realtimeRate = calcRealtimeRate();
-    
-    // Gunakan laju real-time jika buffer cukup (>= 3 titik data)
-    // Fallback ke regresi chart history jika buffer masih kosong/sedikit
-    let rateOfRise;
-    if (realtimeBuffer.length >= 3) {
-        rateOfRise = realtimeRate;
-    } else if (chartHistoryData && chartHistoryData.length >= 2) {
-        const validPoints = chartHistoryData
-            .map((val, idx) => ({ idx, val: Number(val) }))
-            .filter(p => p.val !== null && !isNaN(p.val))
-            .slice(-10);
-        if (validPoints.length >= 2) {
-            const n = validPoints.length;
-            const sumX  = validPoints.reduce((s, p) => s + p.idx, 0);
-            const sumY  = validPoints.reduce((s, p) => s + p.val, 0);
-            const sumXY = validPoints.reduce((s, p) => s + p.idx * p.val, 0);
-            const sumXX = validPoints.reduce((s, p) => s + p.idx * p.idx, 0);
-            const denom = n * sumXX - sumX * sumX;
-            rateOfRise = Math.abs(denom) > 1e-9 ? (n * sumXY - sumX * sumY) / denom : 0;
-        } else {
-            rateOfRise = 0;
-        }
-    } else {
-        rateOfRise = 0;
-    }
-
-    floodForecast.rateOfRise = Math.round(rateOfRise * 100) / 100;
-
-    // Tentukan status ramalan
-    if (rateOfRise > 1) {
-        floodForecast.status = 'urgent';
-    } else if (rateOfRise > 0.3) {
-        floodForecast.status = 'moderate';
-    } else {
-        floodForecast.status = 'normal';
-    }
-
-    updateFloodForecastUI();
-}
 
 /**
  * Update ML Pattern Recognition untuk prediksi musiman
@@ -1016,17 +1174,16 @@ function updateFloodForecastUI() {
     updateFloodPatterns();
     
     // Tentukan label, deskripsi, kelas status, warna gradien, dan ikon secara dinamis
-    let panelTitle = 'Laju Air';
+    let panelTitle = 'Laju Kenaikan';
     let rateDescription = 'Stabil';
-    let rateClass = 'status-aman'; // default safe (green)
+    let rateClass = 'status-aman'; // default safe (green border)
     let iconGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
     let shadowColor = 'rgba(16, 185, 129, 0.4)';
     let rateIcon = `
         <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
-    `; // Ikon stabil (panah kanan horizontal)
+    `; // Ikon stabil (gelombang EKG hijau)
     
     if (floodForecast.rateOfRise > 1.0) {
         panelTitle = 'Laju Kenaikan';
@@ -1095,120 +1252,10 @@ function updateFloodForecastUI() {
         </div>
     `;
     
-    // Tentukan prediksi siaga secara dinamis dan tampilkan sebagai panel estimasi waktu
-    const currentLevel = currentWaterLevel || 0;
-    
-    // Helper function untuk format waktu prediksi per threshold (NAIK & SURUT real-time)
-    const getPredictionStatus = (thresholdVal) => {
-        const rate = floodForecast.rateOfRise; // sudah dihitung dari buffer real-time
-        const absRate = Math.abs(rate);
-        const THRESHOLD = 0.02; // minimum laju signifikan (cm/menit)
-
-        if (rate > THRESHOLD) {
-            // ── Air NAIK ──
-            if (currentLevel >= thresholdVal) {
-                // Sudah melampaui batas ini
-                return `<span style="color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Terlampaui ↑</span>`;
-            }
-            // Hitung menit menuju batas
-            const mins = (thresholdVal - currentLevel) / rate;
-            if (mins > 0 && isFinite(mins)) {
-                const h = Math.floor(mins / 60);
-                const m = Math.round(mins % 60);
-                const timeStr = h > 0 ? `${h}j ${m}m` : `${m} menit`;
-                const isUrgent = mins < 30;
-                const color = isUrgent ? '#ef4444' : '#f59e0b';
-                const bg    = isUrgent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
-                return `<span style="color: ${color}; font-weight: 700; background: ${bg}; padding: 4px 10px; border-radius: 8px; display: inline-block;">± ${timeStr} lagi ↑</span>`;
-            }
-        } else if (rate < -THRESHOLD) {
-            // ── Air SURUT ──
-            if (currentLevel >= thresholdVal) {
-                // Masih di atas batas tapi sedang turun — berapa menit sampai di bawah batas?
-                const mins = (currentLevel - thresholdVal) / absRate;
-                if (mins > 0 && isFinite(mins)) {
-                    const h = Math.floor(mins / 60);
-                    const m = Math.round(mins % 60);
-                    const timeStr = h > 0 ? `${h}j ${m}m` : `${m} menit`;
-                    return `<span style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">± ${timeStr} lagi ↓</span>`;
-                }
-            } else {
-                return `<span style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Aman (Surut ↓)</span>`;
-            }
-        }
-
-        // ── Air STABIL ──
-        if (currentLevel >= thresholdVal) {
-            return `<span style="color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Terlampaui</span>`;
-        }
-        return `<span style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; display: inline-block;">Aman (Stabil)</span>`;
-    };
-
-    const statusSiaga1 = getPredictionStatus(THRESHOLDS.SIAGA1);
-    const statusSiaga2 = getPredictionStatus(THRESHOLDS.SIAGA2);
-
-    // Tentukan warna ikon dan border panel utama berdasarkan tingkat keparahan umum
-    let urgencyClass = 'status-aman';
-    let siagaGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-    let siagaShadow = 'rgba(16, 185, 129, 0.4)';
-
-    if (currentLevel >= THRESHOLDS.SIAGA2) {
-        urgencyClass = 'status-siaga2';
-        siagaGradient = 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)';
-        siagaShadow = 'rgba(239, 68, 68, 0.4)';
-    } else if (currentLevel >= THRESHOLDS.SIAGA1 || floodForecast.rateOfRise > 0.05) {
-        urgencyClass = 'status-siaga1';
-        siagaGradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-        siagaShadow = 'rgba(245, 158, 11, 0.4)';
-    }
-
-    const siagaHTML = `
-        <div class="alert-icon" style="background: ${siagaGradient}; box-shadow: 0 4px 15px ${siagaShadow}; flex-shrink: 0;">
-            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-        </div>
-        <div class="alert-text" style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">
-            <h3 style="text-transform: none; letter-spacing: normal; margin-bottom: 12px; font-weight: 600; color: var(--text-secondary);">Prediksi Waktu Siaga</h3>
-            <div style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; box-sizing: border-box;">
-                
-                <!-- Card Siaga 1 -->
-                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.45); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); width: 280px; box-sizing: border-box; flex-shrink: 0;">
-                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
-                        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--text-secondary);">Siaga 1</span>
-                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Batas ${THRESHOLDS.SIAGA1}cm</span>
-                    </div>
-                    <div style="font-size: 0.95rem; text-align: right;">
-                        ${statusSiaga1}
-                    </div>
-                </div>
-
-                <!-- Card Siaga 2 -->
-                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.45); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); width: 280px; box-sizing: border-box; flex-shrink: 0;">
-                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
-                        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--text-secondary);">Siaga 2</span>
-                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Batas ${THRESHOLDS.SIAGA2}cm</span>
-                    </div>
-                    <div style="font-size: 0.95rem; text-align: right;">
-                        ${statusSiaga2}
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    `;
-    
-    // Tampilkan panel prediksi Siaga
-    if (siagaPanel) {
-        siagaPanel.innerHTML = siagaHTML;
-        siagaPanel.className = `alert-section glass-panel ${urgencyClass}`;
-        siagaPanel.style.display = 'flex';
-    }
-    
     // Trigger auto alerts
     checkAutoAlert();
 }
+
 
 /**
  * Mulai polling otomatis setiap POLL_INTERVAL_MS
@@ -1226,16 +1273,17 @@ function startOfflineDetector() {
 // ─────────────────────────────────────────────
 // START: Weather Fetching Logic
 // ─────────────────────────────────────────────
+// Koordinat default: Desa Lamajang, Bojongsoang, Bandung
 let weatherLat = -6.984213743617759;
 let weatherLon = 107.62672849717276;
-let weatherLocationName = 'Bojongsoang';
+let weatherLocationName = 'Desa Lamajang';       // Default langsung nama benar
 const LAMAJANG_LAT = -6.984214864265832;
 const LAMAJANG_LON = 107.62672526292504;
 let weatherIntervalTimer = null;
 let useProxyDirectly = false;
 let monitoringMap = null;
 let weatherMarker = null;
-let weatherLocationSubtext = 'Bojongsoang, Bandung';
+let weatherLocationSubtext = 'Bojongsoang, Bandung'; // Default langsung nama benar
 
 function getDistanceKm(lat1, lon1, lat2, lon2) {
     const toRad = deg => deg * Math.PI / 180;
@@ -1408,25 +1456,58 @@ async function fetchBmkgWeatherData() {
 
 function formatNominatimLocation(place) {
     const address = place?.address || {};
-    const name = address.village || address.town || address.city || address.suburb ||
-        address.municipality || address.county || place?.name || 'Lokasi dipilih';
-    const region = address.state || address.region || address.county || 'Indonesia';
-    return { name, subtext: region };
+
+    // Urutan prioritas nama lokasi — mencakup struktur alamat semua negara
+    // Nominatim mengisi field berbeda tergantung negara (ID: village, JP: city/town, dst.)
+    const name =
+        address.village        ||  // Desa/Kelurahan (Indonesia)
+        address.hamlet         ||  // Dusun
+        address.neighbourhood  ||  // Lingkungan (beberapa negara)
+        address.suburb         ||  // Kecamatan-level
+        address.city_district  ||  // Distrik kota
+        address.town           ||  // Kota kecil / kecamatan (Jepang: town)
+        address.city           ||  // Kota besar (Tokyo, Osaka, dll)
+        address.municipality   ||  // Kotamadya
+        address.county         ||  // Kabupaten / county
+        place?.name            ||  // Nama dari Nominatim langsung
+        'Lokasi dipilih';
+
+    // Subtext: gabungan region + negara agar akurat untuk semua negara
+    const country = address.country || '';
+    const region  = address.state || address.region || address.county || '';
+    const subtext = region && country
+        ? `${region}, ${country}`   // "Jawa Barat, Indonesia" atau "Osaka Prefecture, Japan"
+        : (region || country || 'Lokasi dipilih');
+
+    return { name, subtext };
 }
 
+
 async function updateWeatherLocationFromCoords(lat, lon) {
+    // Jika koordinat sama persis dengan lokasi sensor (Desa Lamajang), langsung pakai nama default
+    const isLamajang = Math.abs(lat - LAMAJANG_LAT) < 0.001 && Math.abs(lon - LAMAJANG_LON) < 0.001;
+    if (isLamajang) {
+        weatherLocationName    = 'Desa Lamajang';
+        weatherLocationSubtext = 'Bojongsoang, Bandung';
+        const locEl = document.getElementById('weather-location');
+        const subEl = document.getElementById('weather-subtext');
+        if (locEl) locEl.textContent = weatherLocationName;
+        if (subEl) subEl.textContent = weatherLocationSubtext;
+        return;
+    }
+
     try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=13&addressdetails=1`;
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`;
         const response = await fetchWithTimeout(url, { headers: { 'User-Agent': 'safe-floodmonitor/1.0' } }, 5000);
         if (!response.ok) throw new Error('Reverse geocode failed');
         const data = await response.json();
         const location = formatNominatimLocation(data);
-        weatherLocationName = location.name;
+        weatherLocationName    = location.name;
         weatherLocationSubtext = location.subtext;
     } catch (error) {
         console.log('Reverse geocode failed:', error);
-        weatherLocationName = `${Number(lat).toFixed(3)}, ${Number(lon).toFixed(3)}`;
-        weatherLocationSubtext = 'Lokasi peta';
+        weatherLocationName    = `${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`;
+        weatherLocationSubtext = 'Koordinat peta';
     }
 
     const locEl = document.getElementById('weather-location');
@@ -2572,7 +2653,7 @@ function startDataListener() {
     // 3. Mulai offline detector (polling setiap 60 detik)
     startOfflineDetector();
 
-    // 4. Real-time listener data sensor
+    // 4. Real-time listener data sensor (Tinggi Air)
     const waterLevelRef = database.ref('sensor_data/water_level');
     waterLevelRef.on('value', (snapshot) => {
         const data = snapshot.val();
