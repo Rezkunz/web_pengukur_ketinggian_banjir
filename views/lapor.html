@@ -12,6 +12,7 @@
                         </div>
                         <div class="form-group">
                             <label>Tingkat Genangan (Perkiraan)</label>
+
                             <select id="lapor-tingkat">
                                 <option>Mata kaki</option>
                                 <option>Lutut</option>
@@ -19,14 +20,29 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label style="display: block; margin-bottom: 8px; color: var(--text-primary);">Bukti Foto (Wajib dari Kamera)</label>
-                            <label for="lapor-foto" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px 20px; border: 2px dashed #3498db; border-radius: 12px; cursor: pointer; background: rgba(52, 152, 219, 0.05); text-align: center; transition: all 0.3s ease;">
-                                <span style="font-size: 32px; margin-bottom: 10px;">📸</span>
-                                <span id="lapor-foto-text" style="color: var(--text-primary); font-weight: 600; font-size: 1rem;">Ketuk untuk Buka Kamera</span>
-                                <span style="color: var(--text-secondary, #7f8c8d); font-size: 0.8rem; margin-top: 5px;">Mohon foto kondisi genangan saat ini</span>
+                            <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-weight: 600;">Bukti Foto (Wajib dari Kamera)</label>
+                            
+                            <label for="lapor-foto" id="upload-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; border: 2px dashed #3498db; border-radius: 12px; cursor: pointer; background: rgba(52, 152, 219, 0.03); text-align: center; transition: all 0.3s ease; position: relative;">
+                                
+                                <!-- State: Empty -->
+                                <div id="upload-state-empty" style="display: flex; flex-direction: column; align-items: center;">
+                                    <span style="font-size: 40px; margin-bottom: 12px; text-shadow: 0 2px 10px rgba(52,152,219,0.3);">📸</span>
+                                    <span style="color: #3498db; font-weight: 600; font-size: 1.1rem;">Ketuk untuk Buka Kamera</span>
+                                    <span style="color: var(--text-secondary, #7f8c8d); font-size: 0.85rem; margin-top: 6px;">Atau pilih dari galeri jika mendesak</span>
+                                </div>
+
+                                <!-- State: Filled (Preview) -->
+                                <div id="upload-state-filled" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+                                    <img id="lapor-foto-preview" style="max-height: 220px; width: auto; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.1); object-fit: contain; background: #000;">
+                                    <div style="margin-top: 15px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; border: 1px solid rgba(0,0,0,0.05);">
+                                        <span style="font-size: 16px;">📄</span>
+                                        <span id="lapor-foto-name" style="font-size: 0.9rem; color: #333; font-weight: 600; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</span>
+                                        <span style="color: #3498db; font-size: 0.8rem; font-weight: 700; margin-left: 5px; text-decoration: underline;">Ubah</span>
+                                    </div>
+                                </div>
+
                                 <input type="file" id="lapor-foto" accept="image/*" capture="environment" required style="display: none;">
                             </label>
-                            <img id="lapor-foto-preview" style="display:none; width: 100%; margin-top: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.1);">
                         </div>
                         <button type="submit" class="btn-submit" style="margin-top: 20px;">Kirim Laporan</button>
                     </form>

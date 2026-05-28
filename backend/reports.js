@@ -51,19 +51,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const laporFoto = document.getElementById('lapor-foto');
     if (laporFoto) {
         laporFoto.addEventListener('change', function() {
+            const stateEmpty = document.getElementById('upload-state-empty');
+            const stateFilled = document.getElementById('upload-state-filled');
             const preview = document.getElementById('lapor-foto-preview');
-            const textSpan = document.getElementById('lapor-foto-text');
+            const fileNameSpan = document.getElementById('lapor-foto-name');
+            const uploadBox = document.getElementById('upload-box');
+            
             if (this.files && this.files[0]) {
+                const file = this.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     preview.src = e.target.result;
-                    preview.style.display = 'block';
+                    if(stateEmpty) stateEmpty.style.display = 'none';
+                    if(stateFilled) stateFilled.style.display = 'flex';
+                    if(uploadBox) {
+                        uploadBox.style.padding = '20px';
+                        uploadBox.style.borderStyle = 'solid';
+                    }
+                    if(fileNameSpan) fileNameSpan.textContent = file.name || "foto_kamera.jpg";
                 }
-                reader.readAsDataURL(this.files[0]);
-                if (textSpan) textSpan.textContent = "✅ Foto Berhasil Diambil";
+                reader.readAsDataURL(file);
             } else {
-                preview.style.display = 'none';
-                if (textSpan) textSpan.textContent = "Ketuk untuk Buka Kamera";
+                if(stateEmpty) stateEmpty.style.display = 'flex';
+                if(stateFilled) stateFilled.style.display = 'none';
+                if(preview) preview.src = '';
+                if(uploadBox) {
+                    uploadBox.style.padding = '30px 20px';
+                    uploadBox.style.borderStyle = 'dashed';
+                }
             }
         });
     }
@@ -128,8 +143,20 @@ function submitLapor(e) {
                 
                 showSuccessModal('Success', 'Laporan berhasil dikirim, terima kasih!');
                 form.reset();
+                
+                // Reset Preview UI
+                const stateEmpty = document.getElementById('upload-state-empty');
+                const stateFilled = document.getElementById('upload-state-filled');
                 const preview = document.getElementById('lapor-foto-preview');
-                if(preview) { preview.src = ''; preview.style.display = 'none'; }
+                const uploadBox = document.getElementById('upload-box');
+                
+                if(stateEmpty) stateEmpty.style.display = 'flex';
+                if(stateFilled) stateFilled.style.display = 'none';
+                if(preview) preview.src = '';
+                if(uploadBox) {
+                    uploadBox.style.padding = '30px 20px';
+                    uploadBox.style.borderStyle = 'dashed';
+                }
             }
         } catch (err) {
             console.error("Gagal mengirim laporan:", err);
@@ -222,11 +249,11 @@ function listenAdminData() {
                 const safeTingkat = escapeHTML(data.tingkat || '-');
                 const safeTime = date.toLocaleString('id-ID');
 
-                let fotoElement = data.foto ? `<div style="margin-top: 10px;"><img src="${data.foto}" style="max-width: 100%; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);"></div>` : '';
+                let fotoElement = data.foto ? `<div style="margin-top: 15px;"><img src="${data.foto}" style="max-height: 250px; width: auto; max-width: 100%; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); object-fit: contain; background: #000;"></div>` : '';
 
                 adminLapor.innerHTML = `
-                <div class="admin-report-card" style="border-left: 6px solid ${badgeColor};">
-                    <div class="admin-report-header">
+                <div class="admin-report-card" style="border-left: 6px solid ${badgeColor}; display: flex; flex-direction: column; position: relative;">
+                    <div class="admin-report-header" style="padding-right: 40px;">
                         <h4 class="admin-report-title">
                             <span class="admin-report-name">👤 ${safeNama}</span>
                         </h4>
@@ -239,11 +266,14 @@ function listenAdminData() {
                             <span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${safeTingkat}</span>
                         </p>
                         ${fotoElement}
-                        <div style="margin-top: 15px; text-align: right;">
-                            <button onclick="hapusLaporan('${child.key}')" title="Hapus Laporan" style="background: rgba(239, 68, 68, 0.12); border: none; padding: 8px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
-                                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: #ef4444;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            </button>
-                        </div>
+                    </div>
+                    
+                    <!-- Tombol Hapus di Kanan Bawah agar proper -->
+                    <div style="margin-top: 15px; display: flex; justify-content: flex-end; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 10px;">
+                        <button onclick="hapusLaporan('${child.key}')" title="Hapus Laporan" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            Hapus Laporan
+                        </button>
                     </div>
                 </div>
                 ` + adminLapor.innerHTML;
