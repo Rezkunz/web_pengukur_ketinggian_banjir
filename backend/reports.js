@@ -46,41 +46,38 @@ function compressImage(file, maxWidth = 800) {
     });
 }
 
-// Event Listener untuk Preview Foto
-document.addEventListener('DOMContentLoaded', () => {
-    const laporFoto = document.getElementById('lapor-foto');
-    if (laporFoto) {
-        laporFoto.addEventListener('change', function() {
-            const stateEmpty = document.getElementById('upload-state-empty');
-            const stateFilled = document.getElementById('upload-state-filled');
-            const preview = document.getElementById('lapor-foto-preview');
-            const fileNameSpan = document.getElementById('lapor-foto-name');
-            const uploadBox = document.getElementById('upload-box');
-            
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    if(stateEmpty) stateEmpty.style.display = 'none';
-                    if(stateFilled) stateFilled.style.display = 'flex';
-                    if(uploadBox) {
-                        uploadBox.style.padding = '20px';
-                        uploadBox.style.borderStyle = 'solid';
-                    }
-                    if(fileNameSpan) fileNameSpan.textContent = file.name || "foto_kamera.jpg";
-                }
-                reader.readAsDataURL(file);
-            } else {
-                if(stateEmpty) stateEmpty.style.display = 'flex';
-                if(stateFilled) stateFilled.style.display = 'none';
-                if(preview) preview.src = '';
+// Event Listener Global (Event Delegation) untuk Preview Foto
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'lapor-foto') {
+        const stateEmpty = document.getElementById('upload-state-empty');
+        const stateFilled = document.getElementById('upload-state-filled');
+        const preview = document.getElementById('lapor-foto-preview');
+        const fileNameSpan = document.getElementById('lapor-foto-name');
+        const uploadBox = document.getElementById('upload-box');
+        
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                if(preview) preview.src = event.target.result;
+                if(stateEmpty) stateEmpty.style.display = 'none';
+                if(stateFilled) stateFilled.style.display = 'flex';
                 if(uploadBox) {
-                    uploadBox.style.padding = '30px 20px';
-                    uploadBox.style.borderStyle = 'dashed';
+                    uploadBox.style.padding = '20px';
+                    uploadBox.style.borderStyle = 'solid';
                 }
+                if(fileNameSpan) fileNameSpan.textContent = file.name || "foto_kamera.jpg";
             }
-        });
+            reader.readAsDataURL(file);
+        } else {
+            if(stateEmpty) stateEmpty.style.display = 'flex';
+            if(stateFilled) stateFilled.style.display = 'none';
+            if(preview) preview.src = '';
+            if(uploadBox) {
+                uploadBox.style.padding = '30px 20px';
+                uploadBox.style.borderStyle = 'dashed';
+            }
+        }
     }
 });
 
